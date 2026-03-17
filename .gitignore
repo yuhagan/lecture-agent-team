@@ -1,0 +1,17 @@
+# 의존성
+node_modules/
+__pycache__/
+*.pyc
+
+# 생성된 PPTX 출력물 (로컬 생성물)
+*.pptx
+lecture-agent-team/output/lecture.pptx
+lecture-agent-team/output/images/
+
+# 환경 변수 / 시크릿
+.env
+.env.local
+
+# OS
+.DS_Store
+Thumbs.db

@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>Lecture Agent Team — Workflow</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: #0f1117;
+      color: #e2e8f0;
+      font-family: 'Segoe UI', 'Apple SD Gothic Neo', sans-serif;
+      padding: 40px 20px;
+      min-height: 100vh;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 22px;
+      font-weight: 700;
+      color: #f1f5f9;
+      margin-bottom: 6px;
+      letter-spacing: -0.3px;
+    }
+    .subtitle {
+      text-align: center;
+      font-size: 13px;
+      color: #64748b;
+      margin-bottom: 48px;
+    }
+
+    /* ── Layout ── */
+    .flow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0;
+      max-width: 860px;
+      margin: 0 auto;
+    }
+
+    /* ── User box ── */
+    .user-box {
+      background: linear-gradient(135deg, #1e293b, #334155);
+      border: 1.5px solid #475569;
+      border-radius: 12px;
+      padding: 16px 40px;
+      text-align: center;
+      width: 340px;
+    }
+    .user-box .icon { font-size: 22px; margin-bottom: 4px; }
+    .user-box .label { font-size: 15px; font-weight: 700; color: #f1f5f9; }
+    .user-box .desc { font-size: 12px; color: #94a3b8; margin-top: 3px; }
+
+    /* ── Orchestrator ── */
+    .orch-box {
+      background: linear-gradient(135deg, #1e1b4b, #312e81);
+      border: 2px solid #6366f1;
+      border-radius: 14px;
+      padding: 18px 32px;
+      width: 560px;
+      text-align: center;
+      box-shadow: 0 0 24px rgba(99,102,241,0.25);
+    }
+    .orch-box .icon { font-size: 24px; margin-bottom: 4px; }
+    .orch-box .label { font-size: 16px; font-weight: 800; color: #a5b4fc; }
+    .orch-box .desc { font-size: 12px; color: #818cf8; margin-top: 4px; }
+    .orch-routes {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-top: 12px;
+    }
+    .route-tag {
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.4);
+      border-radius: 20px;
+      padding: 3px 10px;
+      font-size: 11px;
+      color: #c7d2fe;
+    }
+
+    /* ── Agent cards ── */
+    .agent-row {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .agent-card {
+      border-radius: 14px;
+      padding: 18px 20px;
+      width: 200px;
+      position: relative;
+    }
+    .agent-card.researcher {
+      background: linear-gradient(160deg, #0c2340, #0e3a5e);
+      border: 1.5px solid #0ea5e9;
+      box-shadow: 0 0 18px rgba(14,165,233,0.2);
+    }
+    .agent-card.writer {
+      background: linear-gradient(160deg, #0d2d1f, #14532d);
+      border: 1.5px solid #22c55e;
+      box-shadow: 0 0 18px rgba(34,197,94,0.2);
+    }
+    .agent-card.designer {
+      background: linear-gradient(160deg, #2d1b69, #4c1d95);
+      border: 1.5px solid #a78bfa;
+      box-shadow: 0 0 18px rgba(167,139,250,0.2);
+    }
+    .agent-card.builder {
+      background: linear-gradient(160deg, #431407, #7c2d12);
+      border: 1.5px solid #f97316;
+      box-shadow: 0 0 18px rgba(249,115,22,0.2);
+    }
+
+    .agent-card .a-icon { font-size: 22px; margin-bottom: 6px; }
+    .agent-card .a-name {
+      font-size: 14px;
+      font-weight: 800;
+      margin-bottom: 2px;
+    }
+    .researcher .a-name { color: #38bdf8; }
+    .writer .a-name { color: #4ade80; }
+    .designer .a-name { color: #c4b5fd; }
+    .builder .a-name { color: #fb923c; }
+
+    .model-badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 10px;
+      margin-bottom: 10px;
+      font-weight: 600;
+    }
+    .badge-sonnet { background: rgba(14,165,233,0.2); color: #7dd3fc; border: 1px solid rgba(14,165,233,0.4); }
+    .badge-opus   { background: rgba(168,85,247,0.2); color: #d8b4fe; border: 1px solid rgba(168,85,247,0.4); }
+
+    .io-block { margin-top: 8px; }
+    .io-label { font-size: 10px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.6px; margin-bottom: 4px; }
+    .io-item {
+      font-size: 11px;
+      color: #cbd5e1;
+      padding: 3px 8px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 6px;
+      margin-bottom: 3px;
+    }
+    .io-item.out {
+      background: rgba(255,255,255,0.08);
+      font-weight: 600;
+    }
+
+    .task-list { margin-top: 10px; }
+    .task-item {
+      font-size: 11px;
+      color: #94a3b8;
+      padding: 2px 0;
+      padding-left: 14px;
+      position: relative;
+    }
+    .task-item::before {
+      content: '①②③④⑤';
+      position: absolute;
+      left: 0;
+    }
+
+    /* ── File nodes ── */
+    .file-node {
+      background: #1e293b;
+      border: 1.5px dashed #475569;
+      border-radius: 8px;
+      padding: 8px 16px;
+      font-size: 12px;
+      font-family: 'Consolas', monospace;
+      color: #94a3b8;
+      text-align: center;
+    }
+    .file-node.highlight {
+      border-color: #f59e0b;
+      color: #fbbf24;
+      background: rgba(245,158,11,0.08);
+      font-weight: 700;
+      box-shadow: 0 0 12px rgba(245,158,11,0.2);
+    }
+
+    /* ── Arrows ── */
+    .arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      padding: 4px 0;
+    }
+    .arrow-line {
+      width: 2px;
+      background: #334155;
+      flex: 1;
+      min-height: 24px;
+    }
+    .arrow-head {
+      width: 0;
+      height: 0;
+      border-left: 6px solid transparent;
+      border-right: 6px solid transparent;
+      border-top: 8px solid #475569;
+    }
+    .arrow-label {
+      font-size: 10px;
+      color: #475569;
+      margin: 0 6px;
+    }
+    .arrow.colored .arrow-line { background: #6366f1; }
+    .arrow.colored .arrow-head { border-top-color: #6366f1; }
+
+    /* ── Parallel section ── */
+    .parallel-section {
+      width: 560px;
+      position: relative;
+    }
+    .parallel-label {
+      text-align: center;
+      font-size: 11px;
+      color: #f59e0b;
+      font-weight: 600;
+      margin-bottom: 12px;
+      padding: 4px 12px;
+      background: rgba(245,158,11,0.1);
+      border: 1px solid rgba(245,158,11,0.3);
+      border-radius: 20px;
+      display: inline-block;
+      position: relative;
+      left: 50%;
+      transform: translateX(-50%);
+    }
+    .parallel-cards {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+    }
+    /* horizontal line connecting parallel agents */
+    .parallel-line {
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 560px;
+      height: 28px;
+    }
+    .parallel-line::before {
+      content: '';
+      position: absolute;
+      top: 50%;
+      left: 160px;
+      right: 160px;
+      height: 2px;
+      background: #334155;
+    }
+    .parallel-branch {
+      display: flex;
+      justify-content: center;
+      gap: 160px;
+    }
+
+    /* ── Output section ── */
+    .output-row {
+      display: flex;
+      gap: 24px;
+      justify-content: center;
+      align-items: flex-start;
+    }
+
+    .output-final {
+      background: linear-gradient(135deg, #1c1917, #292524);
+      border: 2px solid #f59e0b;
+      border-radius: 14px;
+      padding: 20px 32px;
+      text-align: center;
+      box-shadow: 0 0 28px rgba(245,158,11,0.3);
+    }
+    .output-final .icon { font-size: 32px; margin-bottom: 6px; }
+    .output-final .name { font-size: 16px; font-weight: 800; color: #fbbf24; font-family: monospace; }
+    .output-final .desc { font-size: 12px; color: #a78bfa; margin-top: 4px; }
+    .output-final .subdesc { font-size: 11px; color: #78716c; margin-top: 2px; }
+
+    /* ── Legend ── */
+    .legend {
+      display: flex;
+      gap: 20px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 48px;
+      padding-top: 24px;
+      border-top: 1px solid #1e293b;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 12px;
+      color: #64748b;
+    }
+    .legend-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 3px;
+    }
+
+    /* SVG arrows overlay approach — use inline SVG between nodes */
+    .svg-connector {
+      width: 100%;
+      overflow: visible;
+    }
+
+    /* simple vertical spacer arrow */
+    .v-arrow {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .v-arrow-body {
+      width: 2px;
+      height: 32px;
+      background: linear-gradient(to bottom, #334155, #4b5563);
+    }
+    .v-arrow-tip {
+      border-left: 7px solid transparent;
+      border-right: 7px solid transparent;
+      border-top: 10px solid #4b5563;
+    }
+    .v-arrow-text {
+      font-size: 10px;
+      color: #4b5563;
+      margin-top: 3px;
+      font-family: monospace;
+    }
+
+    /* parallel fork */
+    .fork-container {
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 560px;
+    }
+    .fork-svg {
+      width: 560px;
+      height: 60px;
+    }
+  </style>
+</head>
+<body>
+
+<h1>🤖 Lecture Agent Team — 워크플로우</h1>
+<p class="subtitle">한의학·의학 강의 자동 제작 멀티에이전트 시스템</p>
+
+<div class="flow">
+
+  <!-- USER -->
+  <div class="user-box">
+    <div class="icon">👤</div>
+    <div class="label">사용자 요청</div>
+    <div class="desc">강의 주제 입력 (예: "족저근막염 한방 치료")</div>
+  </div>
+
+  <!-- arrow -->
+  <div class="v-arrow">
+    <div class="v-arrow-body"></div>
+    <div class="v-arrow-tip"></div>
+    <div class="v-arrow-text">Task tool 호출</div>
+  </div>
+
+  <!-- ORCHESTRATOR -->
+  <div class="orch-box">
+    <div class="icon">🎛️</div>
+    <div class="label">ORCHESTRATOR</div>
+    <div class="desc">Claude Code — 에이전트 선택 & 순서 제어</div>
+    <div class="orch-routes">
+      <span class="route-tag">전체 파이프라인</span>
+      <span class="route-tag">자료 조사만</span>
+      <span class="route-tag">강의록만</span>
+      <span class="route-tag">PPT만 수정</span>
+      <span class="route-tag">PPT 즉시 생성</span>
+    </div>
+  </div>
+
+  <!-- arrow to researcher -->
+  <div class="v-arrow">
+    <div class="v-arrow-body"></div>
+    <div class="v-arrow-tip"></div>
+    <div class="v-arrow-text">① 순차 실행</div>
+  </div>
+
+  <!-- RESEARCHER -->
+  <div class="agent-card researcher">
+    <div class="a-icon">🔍</div>
+    <div class="a-name">RESEARCHER</div>
+    <span class="model-badge badge-sonnet">claude-sonnet-4-6</span>
+
+    <div class="io-block">
+      <div class="io-label">Input</div>
+      <div class="io-item">강의 주제 (텍스트)</div>
+    </div>
+
+    <div class="io-block" style="margin-top:8px;">
+      <div class="io-label">도구</div>
+      <div class="io-item">WebSearch — PubMed, Cochrane</div>
+      <div class="io-item">WebSearch — KISTI, OASIS, HIRA</div>
+      <div class="io-item">WebFetch — 논문 원문 수집</div>
+    </div>
+
+    <div class="io-block" style="margin-top:8px;">
+      <div class="io-label">Output</div>
+      <div class="io-item out">📄 research_output.md</div>
+    </div>
+  </div>
+
+  <!-- file node -->
+  <div class="v-arrow">
+    <div class="v-arrow-body"></div>
+    <div class="v-arrow-tip"></div>
+  </div>
+  <div class="file-node">output/research_output.md</div>
+
+  <!-- arrow to writer -->
+  <div class="v-arrow">
+    <div class="v-arrow-body"></div>
+    <div class="v-arrow-tip"></div>
+    <div class="v-arrow-text">② 순차 실행</div>
+  </div>
+
+  <!-- WRITER -->
+  <div class="agent-card writer" style="width:280px;">
+    <div class="a-icon">✍️</div>
+    <div class="a-name">WRITER</div>
+    <span class="model-badge badge-opus">claude-opus-4-6</span>
+
+    <div class="io-block">
+      <div class="io-label">Input</div>
+      <div class="io-item">📄 research_output.md</div>
+    </div>
+
+    <div class="io-block" style="margin-top:8px;">
+      <div class="io-label">작업</div>
+      <div class="io-item">15–25 슬라이드 구조 설계</div>
+      <div class="io-item">슬라이드 텍스트 작성</div>
+      <div class="io-item">발표 멘트 · 전환 멘트 작성</div>
+      <div class="io-item">임상 연결 포인트 삽입</div>
+    </div>
+
+    <div class="io-block" style="margin-top:8px;">
+      <div class="io-label">Output</div>
+      <div class="io-item out">📄 lecture_script.md</div>
+    </div>
+  </div>
+
+  <!-- file node -->
+  <div class="v-arrow">
+    <div class="v-arrow-body"></div>
+    <div class="v-arrow-tip"></div>
+  </div>
+  <div class="file-node">output/lecture_script.md</div>
+
+  <!-- FORK arrow -->
+  <div class="fork-container">
+    <svg class="fork-svg" viewBox="0 0 560 60">
+      <!-- vertical down from center -->
+      <line x1="280" y1="0" x2="280" y2="20" stroke="#4b5563" stroke-width="2"/>
+      <!-- horizontal bar -->
+      <line x1="130" y1="20" x2="430" y2="20" stroke="#4b5563" stroke-width="2"/>
+      <!-- left branch -->
+      <line x1="130" y1="20" x2="130" y2="50" stroke="#a78bfa" stroke-width="2"/>
+      <polygon points="123,50 137,50 130,60" fill="#a78bfa"/>
+      <!-- right branch -->
+      <line x1="430" y1="20" x2="430" y2="50" stroke="#fb923c" stroke-width="2"/>
+      <polygon points="423,50 437,50 430,60" fill="#fb923c"/>
+      <!-- label -->
+      <text x="280" y="16" text-anchor="middle" fill="#f59e0b" font-size="11" font-family="sans-serif" font-weight="700">③ 병렬 실행 (동시)</text>
+    </svg>
+  </div>
+
+  <!-- PARALLEL: DESIGNER + BUILDER -->
+  <div class="parallel-cards">
+
+    <div class="agent-card designer">
+      <div class="a-icon">🎨</div>
+      <div class="a-name">DESIGNER</div>
+      <span class="model-badge badge-opus">claude-opus-4-6</span>
+
+      <div class="io-block">
+        <div class="io-label">Input</div>
+        <div class="io-item">📄 lecture_script.md</div>
+        <div class="io-item">📋 SKILL.md (토큰)</div>
+      </div>
+
+      <div class="io-block" style="margin-top:8px;">
+        <div class="io-label">작업</div>
+        <div class="io-item">TYPE-A~H 슬라이드 결정</div>
+        <div class="io-item">라이트↔다크 교차 설계</div>
+        <div class="io-item">뱃지 · 카드 배치 좌표</div>
+        <div class="io-item">특수 요소 지정</div>
+      </div>
+
+      <div class="io-block" style="margin-top:8px;">
+        <div class="io-label">Output</div>
+        <div class="io-item out">📄 design_spec.md</div>
+      </div>
+    </div>
+
+    <div class="agent-card builder">
+      <div class="a-icon">🔨</div>
+      <div class="a-name">BUILDER</div>
+      <span class="model-badge badge-sonnet">claude-sonnet-4-6</span>
+
+      <div class="io-block">
+        <div class="io-label">Input</div>
+        <div class="io-item">📄 design_spec.md</div>
+        <div class="io-item">📄 lecture_script.md</div>
+        <div class="io-item">📋 SKILL.md (토큰)</div>
+      </div>
+
+      <div class="io-block" style="margin-top:8px;">
+        <div class="io-label">작업</div>
+        <div class="io-item">PptxGenJS 코드 작성</div>
+        <div class="io-item">디자인 토큰 상수 정의</div>
+        <div class="io-item">슬라이드별 함수 구현</div>
+        <div class="io-item">node build.js 실행</div>
+      </div>
+
+      <div class="io-block" style="margin-top:8px;">
+        <div class="io-label">Output</div>
+        <div class="io-item out">🗂️ build.js</div>
+        <div class="io-item out" style="color:#fbbf24; border-color: rgba(251,191,36,0.3);">🎯 lecture.pptx</div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- merge arrow -->
+  <div class="fork-container">
+    <svg class="fork-svg" viewBox="0 0 560 60" style="transform: scaleY(-1); margin-top:-4px;">
+      <line x1="280" y1="0" x2="280" y2="20" stroke="#f59e0b" stroke-width="2.5"/>
+      <line x1="130" y1="20" x2="430" y2="20" stroke="#4b5563" stroke-width="2"/>
+      <line x1="130" y1="20" x2="130" y2="58" stroke="#a78bfa" stroke-width="2"/>
+      <line x1="430" y1="20" x2="430" y2="58" stroke="#fb923c" stroke-width="2"/>
+      <polygon points="273,0 287,0 280,10" fill="#f59e0b"/>
+    </svg>
+  </div>
+
+  <!-- FINAL OUTPUT -->
+  <div class="output-final">
+    <div class="icon">📊</div>
+    <div class="name">output/lecture.pptx</div>
+    <div class="desc">최종 산출물 — 한의사·의료인 대상 강의 슬라이드</div>
+    <div class="subdesc">16:9 · 15–25장 · 한글(English) 병기 · 출처 슬라이드 포함</div>
+  </div>
+
+  <!-- Legend -->
+  <div class="legend">
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#38bdf8;"></div> Researcher (Sonnet)
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#4ade80;"></div> Writer (Opus)
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#c4b5fd;"></div> Designer (Opus — 병렬)
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#fb923c;"></div> Builder (Sonnet — 병렬)
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#6366f1;"></div> Orchestrator
+    </div>
+    <div class="legend-item">
+      <div class="legend-dot" style="background:#f59e0b; border-radius:0;"></div> 최종 산출물
+    </div>
+  </div>
+
+</div>
+
+</body>
+</html>
