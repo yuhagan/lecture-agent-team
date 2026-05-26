@@ -191,81 +191,28 @@ PPTX 생성 후 반드시 확인:
 
 ---
 
-## 이미지 다운로드 (build.js 작성 전 반드시 실행)
+## 시각 요소 — 도형으로 직접 그리기 (이미지 사용 금지)
 
-`design_spec.md`에 이미지 URL이 있는 슬라이드는 **build.js 코드 작성 전에** 반드시 로컬에 다운로드한다.
+외부 이미지 다운로드 및 웹 검색을 **절대 하지 않는다.** 모든 시각 요소는 pptxgenjs 도형(`addShape`, `addText`)으로 직접 구현한다.
 
-### 다운로드 절차
+### 도형으로 표현할 수 있는 시각 요소 예시
 
-```bash
-# 1. 이미지 폴더 생성
-mkdir -p lecture-agent-team/output/images
+| 콘텐츠 유형 | 구현 방법 |
+|------------|---------|
+| 해부 다이어그램 | 타원(머리) + 둥근사각형(척추) 여러 개로 배열 |
+| 플로우차트 | 카드 + 화살표(→) 텍스트 또는 선 |
+| 타임라인 | 가로 카드 배열 + 연결 화살표 |
+| 비교 다이어그램 | 구분선 + 좌우 컬럼 |
+| 통계/수치 강조 | 대형 숫자 텍스트 (80~120pt) |
+| 아이콘 대체 | 원/사각형 도형 + 텍스트 라벨 |
 
-# 2. 각 이미지 다운로드 (URL당 한 번씩 실행)
-curl -L -o "lecture-agent-team/output/images/slide_N.png" "https://upload.wikimedia.org/..."
+### 도형 그리기 원칙
 
-# 3. 다운로드 성공 여부 확인 (파일 크기가 0이면 실패)
-ls -lh lecture-agent-team/output/images/
-```
-
-- 파일명은 슬라이드 번호 기준으로 통일: `slide_4.png`, `slide_7.jpg` 등
-- 다운로드 실패 시 PLACEHOLDER로 대체 (아래 이미지 삽입 섹션 참조)
-- SVG 형식은 pptxgenjs 호환 불가 → PNG 썸네일 URL로 대체
-
-### build.js에서 로컬 이미지 삽입
-
-```javascript
-// 로컬 다운로드한 이미지 삽입 (URL 직접 사용 금지)
-slide.addImage({
-  path: "lecture-agent-team/output/images/slide_4.png",
-  x: 5.5, y: 1.2, w: 4.0, h: 3.2,
-  sizing: { type: "contain", w: 4.0, h: 3.2 },
-});
-```
-
----
-
-## 이미지 삽입
-
-`design_spec.md`에 이미지 명세가 있는 슬라이드는 `slide.addImage()`로 삽입한다.
-
-```javascript
-// URL 직접 삽입 (로컬 다운로드 불필요)
-slide.addImage({
-  path: "https://upload.wikimedia.org/wikipedia/commons/...",
-  x: 5.5, y: 1.2, w: 4.0, h: 3.2,
-});
-
-// 캡션 (이미지 바로 아래)
-slide.addText("그림 설명 — CC BY-SA 4.0", {
-  x: 5.5, y: 4.5, w: 4.0, h: 0.25,
-  fontSize: 9, color: C.textMuted, fontFace: F, align: "center",
-});
-```
-
-### 이미지 공란 (PLACEHOLDER)
-
-명세의 URL이 `PLACEHOLDER`이거나 다운로드에 실패한 경우 회색 사각형 + 안내 텍스트로 공란을 렌더링한다.
-
-```javascript
-// URL이 PLACEHOLDER인 경우
-slide.addShape(pptx.shapes.RECTANGLE, {
-  x: 5.5, y: 1.2, w: 4.0, h: 3.2,
-  fill: { color: "E5E7EB" },
-  line: { color: "9CA3AF", width: 1 },
-});
-slide.addText("🖼 이미지 삽입 필요\n[어떤 이미지가 필요한지 설명]", {
-  x: 5.5, y: 1.2, w: 4.0, h: 3.2,
-  fontSize: 13, color: "6B7280", fontFace: F,
-  align: "center", valign: "middle", wrap: true,
-});
-```
-
-### 주의
-- **반드시 로컬 파일 경로 사용** — 원격 URL 직접 삽입 금지
-- 이미지는 build.js 실행 전에 `output/images/` 폴더에 미리 다운로드해야 함
-- 명세에 없는 이미지 임의 추가 금지
-- SVG 파일은 pptxgenjs 호환 불가 → PNG 썸네일 URL로 대체 다운로드
+- `addShape(pres.ShapeType.roundRect, ...)` — 카드, 버텍라(척추) 표현
+- `addShape(pres.ShapeType.ellipse, ...)` — 머리, 원형 아이콘
+- `addShape(pres.ShapeType.rect, ...)` — 구분선, 얇은 바
+- `addText(...)` — 라벨, 숫자, 기호(→, ▲, ✓)
+- 컬러는 반드시 C 토큰 사용 (accentDanger, accentSuccess, accentBrand 등)
 
 ---
 

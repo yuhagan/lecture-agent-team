@@ -1,9 +1,11 @@
+"use strict";
 const pptxgen = require("pptxgenjs");
 const pptx = new pptxgen();
 
 pptx.layout = "LAYOUT_16x9";
-pptx.author = "능골한의원";
+pptx.author = "강의 자동화 시스템";
 
+// ── 디자인 토큰 ──────────────────────────────────────────────────────────────
 const C = {
   bgLight:       "F5F0EB",
   bgDark:        "1A1A1A",
@@ -17,1224 +19,1176 @@ const C = {
   accentBrand:   "1E3A8A",
   badgeBg:       "374151",
   badgeBgLight:  "E5E7EB",
-  // 디자이너 명세 navy 테마
-  bgDarkNav:     "1B2A4A",
-  cardDarkNav:   "253750",
-  accentTeal:    "0A7E8C",
 };
 const F = "Pretendard";
 
-// ─────────────────────────────────────────────
-// 헬퍼 함수
-// ─────────────────────────────────────────────
+// ── 공통 헬퍼 ────────────────────────────────────────────────────────────────
+function bg(slide, isDark) {
+  slide.background = { color: isDark ? C.bgDark : C.bgLight };
+}
 
 function addBadge(slide, text, isDark) {
   const bgColor = isDark ? C.badgeBgLight : C.badgeBg;
-  const txColor = isDark ? C.textPrimary  : C.textInverse;
-  const w = Math.max(text.length * 0.13 + 0.6, 1.2);
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 0.6, y: 0.28, w, h: 0.32,
+  const txColor = isDark ? C.textPrimary : C.textInverse;
+  const w = Math.max(text.length * 0.13 + 0.6, 1.4);
+  const x = (10 - w) / 2;
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x, y: 0.28, w, h: 0.32,
     fill: { color: bgColor }, line: { color: bgColor }, rectRadius: 0.16,
   });
   slide.addText(text, {
-    x: 0.6, y: 0.28, w, h: 0.32,
+    x, y: 0.28, w, h: 0.32,
     fontSize: 11, bold: true, color: txColor, fontFace: F,
     align: "center", valign: "middle",
   });
 }
 
-function addBadgeCustom(slide, text, bgColor, txColor) {
-  const w = Math.max(text.length * 0.13 + 0.6, 1.2);
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 0.6, y: 0.28, w, h: 0.32,
-    fill: { color: bgColor }, line: { color: bgColor }, rectRadius: 0.16,
-  });
+function addSectionTitle(slide, text, isDark) {
   slide.addText(text, {
-    x: 0.6, y: 0.28, w, h: 0.32,
-    fontSize: 11, bold: true, color: txColor, fontFace: F,
-    align: "center", valign: "middle",
+    x: 0.6, y: 0.75, w: 8.8, h: 0.65,
+    fontSize: 34, bold: true,
+    color: isDark ? C.textInverse : C.textPrimary,
+    fontFace: F, valign: "middle",
   });
 }
 
-function addNavCard(slide, { x, y, w, h, title, body, titleColor, bodyColor, titleSize, bodySize }) {
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x, y, w, h,
-    fill: { color: C.cardDarkNav }, line: { color: C.cardDarkNav }, rectRadius: 0.22,
+function addCard(slide, opts) {
+  const { x, y, w, h, isDark, title, body, bodyColor, titleSize, bodySize } = opts;
+  const bgCol = isDark ? C.cardDark : C.cardLight;
+  slide.addShape(pptx.ShapeType.roundRect, {
+    x, y, w, h, fill: { color: bgCol }, line: { color: bgCol }, rectRadius: 0.22,
   });
-  if (title) slide.addText(title, {
-    x: x + 0.22, y: y + 0.13, w: w - 0.44, h: 0.4,
-    fontSize: titleSize || 16, bold: true,
-    color: titleColor || C.textInverse, fontFace: F,
-  });
-  if (body) slide.addText(body, {
-    x: x + 0.22, y: y + 0.55, w: w - 0.44, h: h - 0.7,
-    fontSize: bodySize || 13, color: bodyColor || C.textInverse, fontFace: F, wrap: true,
+  if (title) {
+    slide.addText(title, {
+      x: x + 0.22, y: y + 0.15, w: w - 0.44, h: 0.42,
+      fontSize: titleSize || 18, bold: true,
+      color: isDark ? C.textInverse : C.textPrimary, fontFace: F,
+    });
+  }
+  if (body) {
+    slide.addText(body, {
+      x: x + 0.22, y: y + 0.6, w: w - 0.44, h: h - 0.78,
+      fontSize: bodySize || 13, color: bodyColor || C.textMuted,
+      fontFace: F, wrap: true,
+    });
+  }
+}
+
+function hline(slide, x, y, w, color) {
+  slide.addShape(pptx.ShapeType.line, {
+    x, y, w, h: 0,
+    line: { color: color || C.textMuted, width: 1 },
   });
 }
 
-function addLightCard(slide, { x, y, w, h, title, body, titleColor, bodyColor, titleSize, bodySize }) {
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x, y, w, h,
-    fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-  });
-  if (title) slide.addText(title, {
-    x: x + 0.2, y: y + 0.13, w: w - 0.4, h: 0.4,
-    fontSize: titleSize || 16, bold: true,
-    color: titleColor || C.textPrimary, fontFace: F,
-  });
-  if (body) slide.addText(body, {
-    x: x + 0.2, y: y + 0.55, w: w - 0.4, h: h - 0.7,
-    fontSize: bodySize || 13, color: bodyColor || C.textPrimary, fontFace: F, wrap: true,
+function vline(slide, x, y, h, color, widthPx) {
+  slide.addShape(pptx.ShapeType.rect, {
+    x, y, w: (widthPx || 3) / 72, h,
+    fill: { color: color || C.accentBrand },
+    line: { color: color || C.accentBrand },
   });
 }
 
-function addVline(slide, x, y, h, color) {
-  slide.addShape(pptx.shapes.RECTANGLE, {
-    x, y, w: 0.05, h,
-    fill: { color }, line: { color },
-  });
-}
-
-function addHline(slide, x, y, w, color) {
-  slide.addShape(pptx.shapes.RECTANGLE, {
-    x, y, w, h: 0.03,
-    fill: { color }, line: { color },
-  });
-}
-
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
 // 슬라이드 1 — 표지 (TYPE-A, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide01() {
+  const s = pptx.addSlide();
+  bg(s, false);
 
-  // 우측 수직 accentTeal 띠
-  slide.addShape(pptx.shapes.RECTANGLE, {
-    x: 9.5, y: 0, w: 0.5, h: 5.63,
-    fill: { color: C.accentTeal }, line: { color: C.accentTeal },
+  s.addShape(pptx.ShapeType.rect, {
+    x: 0.5, y: 0.7, w: 0.07, h: 3.2,
+    fill: { color: C.accentBrand }, line: { color: C.accentBrand },
   });
 
-  slide.addText("뭐 들다가 삔\n급성 허리 통증\n셀프 케어 비법", {
-    x: 0.6, y: 1.0, w: 6.5, h: 2.2,
-    fontSize: 40, bold: true, color: C.textPrimary, fontFace: F,
-    align: "left", valign: "top", wrap: true,
+  s.addText("손저림의 한의학적 이해와 치료", {
+    x: 0.75, y: 0.8, w: 8.8, h: 1.5,
+    fontSize: 46, bold: true, color: C.textPrimary, fontFace: F,
+    valign: "middle",
   });
 
-  slide.addText("집에서 바로 실천하는 허리 회복 가이드", {
-    x: 0.6, y: 3.3, w: 6.0, h: 0.5,
-    fontSize: 20, bold: false, color: C.textMuted, fontFace: F, align: "left",
+  s.addText("원인 감별부터 임상 적용까지", {
+    x: 0.75, y: 2.35, w: 8.8, h: 0.6,
+    fontSize: 22, color: C.accentBrand, fontFace: F, valign: "middle",
   });
 
-  slide.addText("능골한의원", {
-    x: 0.6, y: 4.8, w: 3.0, h: 0.4,
-    fontSize: 16, bold: true, color: C.accentTeal, fontFace: F, align: "left",
-  });
+  hline(s, 0.75, 3.1, 6, C.textMuted);
 
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "안녕하세요, 능골한의원입니다. 오늘은 물건을 들다가 허리를 삐었을 때, 집에서 바로 할 수 있는 셀프 케어 방법에 대해 말씀드리려고 해요. 누구나 한 번쯤은 무거운 짐을 들다가 억! 하고 허리가 뻐근해진 경험이 있으실 거예요. 이럴 때 어떻게 해야 하는지, 오늘 쉽고 실용적으로 알려드릴게요.\n\n" +
-    "【전환 멘트】\n" +
-    "먼저, 이런 경험 혹시 있으신가요?"
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 2 — 목차 (TYPE-B, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
-
-  addBadge(slide, "INTRO", false);
-
-  slide.addText("오늘의 강의 목차", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 30, bold: true, color: C.textInverse, fontFace: F,
-  });
-
-  const items = [
-    "이런 경험 있으신가요? — 허리 통증의 흔함",
-    "허리를 삔다는 것? / 왜 들다가 삐는 걸까?",
-    "안심하세요 — 대부분 좋아집니다 + 급성기 대처",
-    "냉·온찜질 / 편한 자세 / 금지 동작 / 올바른 들기",
-    "가볍게 움직이기 + 스트레칭 3가지 + 한의원 치료 + 재발 방지",
-  ];
-
-  items.forEach((text, i) => {
-    const y = 1.5 + i * 0.75;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 8.8, h: 0.62,
-      fill: { color: C.cardDarkNav }, line: { color: C.cardDarkNav }, rectRadius: 0.22,
-    });
-    slide.addText("0" + (i + 1), {
-      x: 0.7, y: y + 0.06, w: 0.6, h: 0.5,
-      fontSize: 22, bold: true, color: C.accentTeal, fontFace: F, align: "center",
-    });
-    addVline(slide, 1.3, y + 0.1, 0.42, C.accentTeal);
-    slide.addText(text, {
-      x: 1.45, y: y + 0.1, w: 7.8, h: 0.42,
-      fontSize: 16, color: C.textInverse, fontFace: F, valign: "middle",
-    });
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "오늘 강의 순서입니다. 허리가 왜 삐는지부터, 급할 때 바로 해야 할 것, 스트레칭, 한의원 치료, 그리고 재발 방지까지 쭉 알려드릴게요. 끝까지 들으시면 집에서 바로 실천할 수 있는 방법들을 가져가실 수 있습니다.\n\n" +
-    "【전환 멘트】\n" +
-    "자, 그럼 첫 번째 이야기부터 시작해볼까요?"
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 3 — 이런 경험 있으신가요? (TYPE-C, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addVline(slide, 1.5, 0.9, 1.8, C.accentTeal);
-
-  slide.addText("허리 통증은\n정말 흔한 일입니다", {
-    x: 2.0, y: 0.9, w: 6.5, h: 1.1,
-    fontSize: 36, bold: true, color: C.textPrimary, fontFace: F, wrap: true,
-  });
-
-  addHline(slide, 2.0, 2.2, 5.0, C.bgDarkNav);
-
-  const experiences = [
-    "무거운 택배를 들다가 갑자기 허리가 뻐근...",
-    "아이를 번쩍 안아올리다가 허리에서 뚝 소리가...",
-    "허리를 구부려 바닥의 물건을 집다가 꼼짝도 못하게...",
-  ];
-
-  experiences.forEach((text, i) => {
-    const y = 2.45 + i * 0.68;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 5.8, h: 0.6,
-      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-    });
-    slide.addText('"' + text + '"', {
-      x: 0.8, y: y + 0.03, w: 5.5, h: 0.54,
-      fontSize: 14, color: C.textPrimary, fontFace: F, italic: true, valign: "middle",
-    });
-  });
-
-  // 통계 카드
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 6.7, y: 2.45, w: 2.9, h: 2.7,
-    fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-  });
-  addVline(slide, 6.75, 2.5, 2.6, C.accentTeal);
-  slide.addText("전 세계 인구\n60~80%\n일생에 1회 이상\n허리 통증 경험", {
-    x: 6.95, y: 2.55, w: 2.5, h: 1.2,
-    fontSize: 13, color: C.textPrimary, fontFace: F, wrap: true, bold: true,
-  });
-  slide.addText("한국 성인\n약 16%\n현재 허리 통증\n호소 중", {
-    x: 6.95, y: 3.85, w: 2.5, h: 1.1,
-    fontSize: 13, color: C.textPrimary, fontFace: F, wrap: true, bold: true,
-  });
-
-  slide.addText("나만 이런 게 아닙니다 — 안심하세요!", {
-    x: 0.6, y: 5.18, w: 6.0, h: 0.32,
-    fontSize: 15, italic: true, color: C.accentTeal, fontFace: F,
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "혹시 이런 경험 있으신가요? 택배를 들다가, 아이를 안다가, 바닥에 있는 물건을 집다가 갑자기 허리가 뻐근해진 적요. 사실 이건 정말 흔한 일이에요. 전 세계적으로 10명 중 6~8명은 살면서 한 번은 허리 통증을 겪는다고 합니다. 한국 성인만 봐도 약 16%가 허리 통증을 갖고 계세요. 그러니까 나만 이런가 하고 걱정하실 필요 전혀 없습니다.\n\n" +
-    "【전환 멘트】\n" +
-    "그런데 허리를 삔다는 게 정확히 어떤 건지, 쉽게 설명해드릴게요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 4 — 허리를 삔다는 것? (TYPE-F, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "ANATOMY", C.badgeBgLight, C.accentTeal);
-
-  slide.addText("허리를 삔다는 것?", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 30, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  addVline(slide, 0.6, 1.45, 0.9, C.accentTeal);
-  slide.addText("요추(허리뼈) = 5개의 뼈 + 추간판(디스크) + 근육·인대", {
-    x: 0.85, y: 1.45, w: 8.8, h: 0.4,
-    fontSize: 17, bold: true, color: C.textPrimary, fontFace: F,
-  });
-  slide.addText("뼈 사이 충격흡수 물렁뼈와 주변 근육·인대가 허리를 지탱합니다", {
-    x: 0.85, y: 1.9, w: 8.8, h: 0.35,
+  s.addText("한의학 임상 강의 시리즈  |  총 20장  |  40분", {
+    x: 0.75, y: 3.3, w: 8.0, h: 0.4,
     fontSize: 14, color: C.textMuted, fontFace: F,
   });
 
-  addLightCard(slide, {
-    x: 0.6, y: 2.5, w: 4.2, h: 2.6,
-    title: "근육 좌상 (Strain)",
-    titleColor: C.accentTeal,
-    body: "근육이 과하게 늘어나\n미세하게 찢어진 것\n\n통증, 뻐근함, 움직임 제한",
-    bodyColor: C.textPrimary,
-    titleSize: 18, bodySize: 14,
-  });
-  addLightCard(slide, {
-    x: 5.2, y: 2.5, w: 4.2, h: 2.6,
-    title: "인대 염좌 (Sprain)",
-    titleColor: C.accentTeal,
-    body: "인대가 과하게 늘어나\n손상된 것\n\n통증, 불안정감",
-    bodyColor: C.textPrimary,
-    titleSize: 18, bodySize: 14,
-  });
+  s.addNotes("【발표 멘트】\n안녕하십니까. 오늘 강의에서는 외래에서 자주 마주치는 '손저림'이라는 증상을 깊이 있게 다뤄보겠습니다. 환자분들이 \"손이 저려요\"라고 호소할 때, 우리가 어떤 감별 과정을 거쳐야 하는지, 그리고 한의학적으로 어떤 근거 위에서 치료할 수 있는지를 체계적으로 정리해 드리겠습니다. 임상에서 바로 활용하실 수 있는 내용 중심으로 구성했습니다.\n\n【전환 멘트】\n먼저 오늘 강의의 전체 흐름을 간단히 살펴보겠습니다.");
+})();
 
-  slide.addText("약 90%의 급성 허리 통증 = 근육·인대 손상 (뼈나 디스크 문제가 아닌 경우 대부분!)", {
-    x: 0.6, y: 5.18, w: 9.0, h: 0.32,
-    fontSize: 13, bold: true, color: C.accentTeal, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "우리 허리는 요추라고 하는 5개의 뼈로 이루어져 있어요. 이 뼈 사이사이에는 충격을 흡수하는 물렁뼈, 전문용어로 추간판이라고 하는 게 있고요, 그 주변을 근육과 인대가 꽉 잡아주고 있습니다. 허리를 삔다는 건, 이 근육이나 인대가 과하게 늘어나면서 미세하게 찢어진 거예요. 의학용어로는 근육 좌상이라고 하고요. 중요한 건, 급성 허리 통증의 약 90%가 이런 근육이나 인대 손상이라는 거예요. 뼈가 부러지거나 디스크가 터진 게 아닌 경우가 대부분이라는 말씀입니다.\n\n" +
-    "【전환 멘트】\n" +
-    "그럼 왜 하필 물건을 들다가 이런 일이 생기는 걸까요?"
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 5 — 왜 들다가 삐는 걸까? (TYPE-D, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
-
-  addBadgeCustom(slide, "CAUSE", C.badgeBg, C.textInverse);
-
-  slide.addText("왜 들다가 삐는 걸까?", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 30, bold: true, color: C.textInverse, fontFace: F,
-  });
-
-  const causes = [
-    "허리만 구부려서 들기 → 다리 아닌 허리 근육에 힘이 집중",
-    "물건을 몸에서 멀리 두고 들기 → 지렛대 효과로 허리 부하 급증",
-    "들면서 동시에 몸을 비트는 동작 → 인대·관절 손상 위험",
-    "준비 없이 갑자기 훅 하고 들기 → 근육이 방어할 시간 부족",
-  ];
-
-  causes.forEach((text, i) => {
-    const y = 1.55 + i * 0.82;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 8.8, h: 0.72,
-      fill: { color: C.cardDarkNav }, line: { color: C.cardDarkNav }, rectRadius: 0.22,
-    });
-    addVline(slide, 0.65, y + 0.1, 0.52, C.accentDanger);
-    slide.addText(text, {
-      x: 0.9, y: y + 0.1, w: 8.3, h: 0.52,
-      fontSize: 15, color: C.textInverse, fontFace: F, valign: "middle",
-    });
-  });
-
-  slide.addText("무릎은 안 굽히고 허리만 굽히는 것이 가장 흔한 원인!", {
-    x: 0.6, y: 5.05, w: 8.8, h: 0.35,
-    fontSize: 14, bold: true, color: C.accentTeal, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "물건을 들다가 허리가 삐는 이유, 크게 네 가지입니다. 첫째, 무릎은 안 굽히고 허리만 구부려서 들 때. 이러면 다리 근육 대신 허리 근육에 힘이 다 몰려요. 둘째, 물건을 몸에서 멀리 두고 들 때. 물건이 몸에서 멀어질수록 허리에 가는 부담이 훨씬 커집니다. 셋째, 들면서 동시에 몸을 비틀 때. 이건 인대나 관절에 아주 안 좋아요. 넷째, 준비 없이 갑자기 확 들 때. 근육이 준비할 시간도 없이 힘이 가해지면 당연히 다칠 수밖에 없겠죠.\n\n" +
-    "【전환 멘트】\n" +
-    "이렇게 허리를 삐면 많이 걱정되시죠. 그런데 아주 중요한 사실을 먼저 알려드릴게요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 6 — 안심하세요, 대부분 좋아집니다 (TYPE-G, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "RECOVERY", C.badgeBgLight, C.accentTeal);
-
-  slide.addText("안심하세요 — 대부분 좋아집니다", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 28, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  const stats = [
-    { num: "1개월", sub: "통증 58% 감소\n직장 복귀 82%" },
-    { num: "6주",   sub: "대부분\n의미 있는 호전" },
-    { num: "3개월", sub: "통증 안정화\n일상 복귀" },
-    { num: "12개월", sub: "직장 복귀\n93%" },
-  ];
-
-  stats.forEach(function(s, i) {
-    const x = 0.5 + i * 2.3;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x, y: 1.5, w: 2.1, h: 2.1,
-      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-    });
-    slide.addShape(pptx.shapes.RECTANGLE, {
-      x, y: 1.5, w: 2.1, h: 0.04,
-      fill: { color: C.accentTeal }, line: { color: C.accentTeal },
-    });
-    slide.addText(s.num, {
-      x: x + 0.05, y: 1.65, w: 2.0, h: 0.55,
-      fontSize: 28, bold: true, color: C.accentTeal, fontFace: F, align: "center",
-    });
-    slide.addText(s.sub, {
-      x: x + 0.1, y: 2.25, w: 1.9, h: 1.2,
-      fontSize: 13, color: C.textMuted, fontFace: F, align: "center", wrap: true,
-    });
-  });
-
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 0.6, y: 3.85, w: 8.8, h: 0.75,
-    fill: { color: C.cardLight }, line: { color: C.accentTeal, width: 2 }, rectRadius: 0.22,
-  });
-  slide.addText("약 90%의 환자가 6주 이내에 의미 있게 좋아집니다", {
-    x: 0.7, y: 3.9, w: 8.6, h: 0.65,
-    fontSize: 18, bold: true, color: C.accentTeal, fontFace: F, align: "center", valign: "middle",
-  });
-
-  slide.addText("올바르게 관리하면 더 빨리 회복됩니다!", {
-    x: 0.6, y: 4.75, w: 8.8, h: 0.35,
-    fontSize: 14, italic: true, color: C.textMuted, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "가장 먼저 드리고 싶은 말씀은, 안심하세요입니다. 연구 결과를 보면, 급성 허리 통증 환자의 약 90%가 6주 안에 의미 있게 좋아집니다. 한 달만 지나도 통증이 절반 이상 줄고, 82%가 일상으로 복귀해요. 지금은 많이 아프고 걱정되시겠지만, 대부분은 시간이 지나면서 자연스럽게 회복됩니다. 물론 올바르게 관리하면 더 빨리 좋아질 수 있어요.\n\n" +
-    "【전환 멘트】\n" +
-    "그럼 지금 당장 집에서 뭘 해야 하는지, 바로 알려드릴게요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 7 — 지금 당장 해야 할 것 (TYPE-D, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "ACUTE CARE", C.accentDanger, C.textInverse);
-
-  slide.addText("지금 당장 해야 할 것 (급성기 1~2일)", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 28, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  const actions = [
-    { label: "보호", text: "무거운 것 들기 자제, 통증 유발 동작 피하기" },
-    { label: "적절한 휴식", text: "통증이 심한 첫 1~2일은 활동 줄이기" },
-    { label: "온찜질", text: "하루 2번, 1회 20분 (다음 슬라이드에서 자세히)" },
-    { label: "가볍게 움직이기", text: "화장실 가기, 집안 걸어 다니기 — 통증 범위 안에서" },
-  ];
-
-  actions.forEach(function(a, i) {
-    const y = 1.5 + i * 0.74;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 8.8, h: 0.65,
-      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-    });
-    addVline(slide, 0.65, y + 0.1, 0.45, C.accentSuccess);
-    slide.addText(a.label, {
-      x: 0.9, y: y + 0.1, w: 1.8, h: 0.45,
-      fontSize: 14, bold: true, color: C.accentTeal, fontFace: F, valign: "middle",
-    });
-    slide.addText(a.text, {
-      x: 2.75, y: y + 0.1, w: 6.5, h: 0.45,
-      fontSize: 14, color: C.textPrimary, fontFace: F, valign: "middle",
-    });
-  });
-
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 0.6, y: 4.55, w: 8.8, h: 0.65,
-    fill: { color: "FEF2F2" }, line: { color: C.accentDanger, width: 2 }, rectRadius: 0.22,
-  });
-  slide.addText("48시간 이상 침상 안정은 금지! — 오히려 회복이 느려집니다", {
-    x: 0.8, y: 4.6, w: 8.4, h: 0.55,
-    fontSize: 15, bold: true, color: C.accentDanger, fontFace: F, align: "center", valign: "middle",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "허리를 삐었을 때, 첫 1~2일이 가장 중요해요. 이때는 무거운 것 들기를 피하시고, 통증을 악화시키는 동작은 하지 마세요. 그런데 여기서 아주 중요한 포인트! 이틀 넘게 꼼짝도 안 하고 누워만 있으면 오히려 회복이 느려진다는 연구 결과가 있어요. 여러 가이드라인에서 공통으로 권고하는 사항입니다. 통증이 허락하는 범위에서 화장실도 가고, 집안을 가볍게 걸어 다니세요. 그리고 온찜질을 해주시면 좋아요. 하루에 두 번, 한 번에 20분 정도요.\n\n" +
-    "【전환 멘트】\n" +
-    "그런데 냉찜질을 해야 할까요, 온찜질을 해야 할까요? 이것 참 헷갈리시죠?"
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 8 — 냉찜질 vs 온찜질 (TYPE-C, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
-
-  addBadgeCustom(slide, "HEAT THERAPY", C.badgeBg, C.textInverse);
-
-  addVline(slide, 1.5, 0.85, 1.3, C.accentTeal);
-  slide.addText("허리 통증엔\n온찜질이 먼저!", {
-    x: 2.0, y: 0.85, w: 7.0, h: 1.0,
-    fontSize: 34, bold: true, color: C.textInverse, fontFace: F, wrap: true,
-  });
-
-  addHline(slide, 2.0, 2.1, 5.0, C.accentTeal);
-
-  // 온찜질 카드
-  addNavCard(slide, {
-    x: 0.6, y: 2.38, w: 4.3, h: 2.85,
-    title: "온찜질 (Heat) — 1순위 추천",
-    titleColor: C.accentSuccess,
-    body: "371명 대상 연구:\n온열 패치가 진통제보다\n통증 완화 33~52% 우수\n\n혈류 증가 -> 근육 이완 -> 통증 차단\n\n1회 20분, 하루 2회, 1주일간",
-    bodyColor: C.textInverse,
-    titleSize: 15, bodySize: 13,
-  });
-  addVline(slide, 0.65, 2.43, 2.75, C.accentSuccess);
-
-  // 냉찜질 카드
-  addNavCard(slide, {
-    x: 5.2, y: 2.38, w: 4.3, h: 2.85,
-    title: "냉찜질 (Cold) — 근거 제한적",
-    titleColor: C.textMuted,
-    body: "허리 통증 냉찜질 연구 매우 부족\n\n타박상 등 외상 직후에만\n제한적 사용 가능\n\n허리 통증엔 권고 미흡",
-    bodyColor: C.textInverse,
-    titleSize: 15, bodySize: 13,
-  });
-  addVline(slide, 5.25, 2.43, 2.75, C.textMuted);
-
-  slide.addText("결론: 허리 통증엔 온찜질 먼저! 본인이 편한 쪽을 선택하셔도 됩니다", {
-    x: 0.6, y: 5.3, w: 9.0, h: 0.25,
-    fontSize: 12, bold: true, color: C.accentTeal, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "다치면 냉찜질부터 해야 한다고 많이 들으셨죠? 그런데 허리 통증에서는 좀 달라요. 371명을 대상으로 한 연구를 보면, 온찜질이 진통제보다 통증 완화에 33~52%나 더 효과적이었습니다. 온찜질이 혈류를 증가시키고 근육을 이완시켜서 통증 신호를 줄여주거든요. 반면에 냉찜질은 허리 통증에 대한 근거가 아직 충분하지 않아요. 그래서 전문가들은 허리 통증에는 온찜질을 먼저 추천합니다. 핫팩이나 따뜻한 수건으로 하루에 두 번, 한 번에 20분씩 해보세요.\n\n" +
-    "【전환 멘트】\n" +
-    "자, 이번에는 아플 때 어떤 자세가 편한지 알아볼게요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 9 — 이 자세가 편해요 (TYPE-E, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "POSTURE", C.badgeBgLight, C.accentTeal);
-
-  slide.addText("이 자세가 편해요 (통증 완화 자세)", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 28, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  const postures = [
-    {
-      title: "누울 때",
-      body: "바로 누워 무릎 아래 베개 1~2개\n옆으로 누워 무릎 사이 베개\n엎드려 자는 것은 피하세요",
-    },
-    {
-      title: "앉을 때",
-      body: "수건 말아 허리에 받치기\n10~15분마다 자세 바꾸기\n푹신한 소파·낮은 의자 피하기",
-    },
-    {
-      title: "서 있을 때",
-      body: "한 발을 낮은 발판에 올리기\n체중 분산으로 허리 부담 감소",
-    },
-    {
-      title: "피할 자세",
-      body: "엎드려 자기\n깊이 기대는 소파\n장시간 같은 자세 유지",
-    },
-  ];
-
-  postures.forEach(function(p, i) {
-    const x = 0.55 + i * 2.3;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x, y: 1.55, w: 2.15, h: 3.55,
-      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-    });
-    slide.addShape(pptx.shapes.RECTANGLE, {
-      x, y: 1.55, w: 2.15, h: 0.04,
-      fill: { color: C.accentTeal }, line: { color: C.accentTeal },
-    });
-    slide.addText(p.title, {
-      x: x + 0.15, y: 1.65, w: 1.85, h: 0.4,
-      fontSize: 15, bold: true, color: C.accentTeal, fontFace: F,
-    });
-    slide.addText(p.body, {
-      x: x + 0.12, y: 2.1, w: 1.9, h: 2.9,
-      fontSize: 12, color: C.textPrimary, fontFace: F, wrap: true,
-    });
-  });
-
-  slide.addText("자세만 바꿔도 통증이 줄어듭니다", {
-    x: 0.6, y: 5.22, w: 9.0, h: 0.28,
-    fontSize: 14, italic: true, color: C.accentTeal, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "허리가 아플 때 자세가 정말 중요해요. 누울 때는 바로 누워서 무릎 아래에 베개를 한두 개 받쳐보세요. 이것만으로도 허리에 가는 부담이 확 줄어듭니다. 옆으로 누울 때는 무릎 사이에 베개를 끼우면 허리가 비틀어지는 걸 막아줘요. 엎드려 자는 건 급성기에 통증이 악화될 수 있으니 피하시고요. 앉을 때는 수건을 말아서 허리 뒤에 받쳐주세요. 그리고 한 자세로 10~15분 이상 앉아있지 마시고 자주 바꿔주세요. 푹신한 소파나 낮은 의자는 허리 곡선을 망가뜨려서 안 좋습니다.\n\n" +
-    "【전환 멘트】\n" +
-    "편한 자세를 알았으니, 이번엔 절대 하면 안 되는 동작을 짚어볼게요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 10 — 이건 절대 하지 마세요 (TYPE-E, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
-
-  addBadgeCustom(slide, "WARNING", C.accentDanger, C.textInverse);
-
-  slide.addText("이건 절대 하지 마세요 (금지 동작)", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 28, bold: true, color: C.textInverse, fontFace: F,
-  });
-
-  const donts = [
-    "허리 굽혀 발가락 만지기 (신경 자극 + 디스크 압박)",
-    "앉은 자세에서 갑자기 앞으로 몸 기울이기",
-    "무거운 것 들기 (급성기 5kg 이상 자제)",
-    "30분 이상 같은 자세로 있기",
-    "달리기·줄넘기 등 충격이 큰 운동",
-  ];
-
-  donts.forEach(function(text, i) {
-    const y = 1.55 + i * 0.7;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 8.8, h: 0.62,
-      fill: { color: C.cardDarkNav }, line: { color: C.cardDarkNav }, rectRadius: 0.22,
-    });
-    addVline(slide, 0.65, y + 0.1, 0.42, C.accentDanger);
-    slide.addText("X", {
-      x: 0.8, y: y + 0.1, w: 0.4, h: 0.42,
-      fontSize: 14, bold: true, color: C.accentDanger, fontFace: F, align: "center", valign: "middle",
-    });
-    slide.addText(text, {
-      x: 1.25, y: y + 0.1, w: 8.0, h: 0.42,
-      fontSize: 14, color: C.textInverse, fontFace: F, valign: "middle",
-    });
-  });
-
-  slide.addText("급성기에 이 동작들은 통증을 악화시키고 회복을 늦춥니다", {
-    x: 0.6, y: 5.18, w: 8.8, h: 0.32,
-    fontSize: 13, bold: true, color: C.accentDanger, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "허리가 아플 때 절대 하시면 안 되는 동작들이 있어요. 첫째, 허리를 굽혀서 발끝을 만지려는 스트레칭. 이게 좋을 것 같지만, 급성기에는 신경을 자극하고 디스크에 압력을 줄 수 있어요. 둘째, 앉아 있다가 갑자기 앞으로 확 기울이는 거. 셋째, 무거운 것 들기. 급성기에는 5kg 이상은 피해주세요. 넷째, 30분 이상 같은 자세로 가만히 있는 것. 이건 정말 안 좋습니다. 다섯째, 달리기나 줄넘기 같은 충격이 큰 운동도 급성기에는 피하셔야 해요.\n\n" +
-    "【전환 멘트】\n" +
-    "그럼 나중에 물건을 들 때는 어떻게 해야 안전할까요?"
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 11 — 올바른 물건 들기 (TYPE-F, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "TECHNIQUE", C.badgeBgLight, C.accentTeal);
-
-  slide.addText("올바른 물건 들기", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 30, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  addVline(slide, 0.6, 1.45, 0.6, C.accentTeal);
-  slide.addText("물건은 몸에 가까이, 무릎을 굽혀서, 천천히 들어 올리세요", {
-    x: 0.85, y: 1.45, w: 8.8, h: 0.55,
-    fontSize: 16, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  const steps = [
-    { num: "1", text: "물건에 최대한 가까이 다가가기" },
-    { num: "2", text: "발을 어깨 너비로 벌려 안정감 확보" },
-    { num: "3", text: "무릎을 굽혀 쪼그려 앉기 (허리 아닌 다리 힘!)" },
-    { num: "4", text: "배에 힘주기 (코어 안정화)" },
-    { num: "5", text: "등을 곧게 유지하며 서서히 일어서기" },
-  ];
-
-  steps.forEach(function(s, i) {
-    const y = 2.2 + i * 0.56;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 8.8, h: 0.49,
-      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-    });
-    slide.addText(s.num, {
-      x: 0.72, y: y + 0.04, w: 0.45, h: 0.41,
-      fontSize: 18, bold: true, color: C.accentTeal, fontFace: F, align: "center", valign: "middle",
-    });
-    slide.addText(s.text, {
-      x: 1.25, y: y + 0.04, w: 8.0, h: 0.41,
-      fontSize: 14, color: C.textPrimary, fontFace: F, valign: "middle",
-    });
-  });
-
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 0.6, y: 5.03, w: 8.8, h: 0.42,
-    fill: { color: "FEF2F2" }, line: { color: C.accentDanger, width: 1 }, rectRadius: 0.18,
-  });
-  slide.addText("절대 금지: 허리 구부린 채 몸 비틀기", {
-    x: 0.7, y: 5.06, w: 8.6, h: 0.36,
-    fontSize: 14, bold: true, color: C.accentDanger, fontFace: F, align: "center", valign: "middle",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "물건을 안전하게 드는 방법, 꼭 기억해주세요. 가장 중요한 건, 물건에 최대한 가까이 다가가는 거예요. 물건이 몸에서 멀어질수록 허리에 가는 부담이 크게 늘어납니다. 그 다음, 발을 어깨 너비로 벌리고, 무릎을 굽혀서 쪼그려 앉으세요. 허리가 아니라 다리 근육으로 드는 겁니다. 그리고 배에 살짝 힘을 주면서 등을 곧게 유지한 채 천천히 일어나세요. 한 가지 절대 하지 말아야 할 게 있는데요, 허리를 구부린 채로 몸을 비트는 동작이에요. 이건 인대와 관절에 정말 무리를 줍니다.\n\n" +
-    "【전환 멘트】\n" +
-    "자, 급성기 첫 이틀이 지났다면, 이제 조금씩 움직이기 시작해야 해요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 12 — 2~3일 후, 가볍게 움직이세요 (TYPE-F, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
-
-  addBadgeCustom(slide, "MOVEMENT", C.badgeBg, C.textInverse);
-
-  slide.addText("2~3일 후, 가볍게 움직이세요", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 28, bold: true, color: C.textInverse, fontFace: F,
-  });
-
-  addVline(slide, 0.6, 1.45, 0.6, C.accentTeal);
-  slide.addText("통증이 허락하는 범위에서 움직이기가 최선의 전략", {
-    x: 0.85, y: 1.45, w: 8.8, h: 0.55,
-    fontSize: 15, color: C.textMuted, fontFace: F,
-  });
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 2 — 목차 (TYPE-B, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide02() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "CONTENTS", true);
+  addSectionTitle(s, "오늘 강의 목차", true);
 
   const items = [
-    { step: "STEP 1", text: "급성기(첫 1~2일) 지나면 가볍게 걷기 시작", color: C.accentSuccess },
-    { step: "STEP 2", text: "하루 15~30분 걷기부터 (무리하지 않는 범위에서)", color: C.accentSuccess },
-    { step: "STEP 3", text: "통증이 50% 이상 줄었을 때 스트레칭 시작", color: C.accentTeal },
+    { num: "01", text: "왜 손저림인가? — 역학과 현황" },
+    { num: "02", text: "원인 질환별 병태생리와 해부학" },
+    { num: "03", text: "감별 진단 — 이학적 검사와 감별 포인트" },
+    { num: "04", text: "한의학 치료 근거 — 침, 한약, 추나" },
+    { num: "05", text: "임상 적용 가이드 — 변증, 알고리즘, Red Flags" },
   ];
 
   items.forEach(function(item, i) {
-    const y = 2.2 + i * 0.85;
-    addNavCard(slide, { x: 0.6, y, w: 8.8, h: 0.75 });
-    addVline(slide, 0.65, y + 0.1, 0.55, item.color);
-    slide.addText(item.step, {
-      x: 0.85, y: y + 0.1, w: 1.1, h: 0.55,
-      fontSize: 12, bold: true, color: item.color, fontFace: F, valign: "middle",
+    const y = 1.6 + i * 0.72;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: 0.6, y: y, w: 0.55, h: 0.52,
+      fill: { color: C.accentBrand }, line: { color: C.accentBrand }, rectRadius: 0.1,
     });
-    slide.addText(item.text, {
-      x: 2.0, y: y + 0.1, w: 7.2, h: 0.55,
-      fontSize: 15, color: C.textInverse, fontFace: F, valign: "middle",
+    s.addText(item.num, {
+      x: 0.6, y: y, w: 0.55, h: 0.52,
+      fontSize: 16, bold: true, color: C.textInverse, fontFace: F,
+      align: "center", valign: "middle",
+    });
+    s.addText(item.text, {
+      x: 1.3, y: y + 0.04, w: 8.0, h: 0.45,
+      fontSize: 18, color: C.textInverse, fontFace: F, valign: "middle",
     });
   });
 
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 0.6, y: 4.9, w: 8.8, h: 0.55,
-    fill: { color: C.cardDarkNav }, line: { color: C.accentDanger, width: 1 }, rectRadius: 0.22,
-  });
-  slide.addText("침대에만 누워있지 마세요! -> 근육 약화 + 회복 지연", {
-    x: 0.7, y: 4.93, w: 8.6, h: 0.49,
-    fontSize: 14, bold: true, color: C.accentDanger, fontFace: F, align: "center", valign: "middle",
-  });
+  s.addNotes("【발표 멘트】\n오늘 강의는 크게 다섯 파트로 구성됩니다. 먼저 손저림이 왜 중요한 주제인지 역학 데이터로 확인하고, 원인 질환별 병태생리를 해부학적으로 정리합니다. 이어서 외래에서 실제로 쓸 수 있는 감별 진단 포인트를 정리한 뒤, 침치료와 한약의 RCT 근거를 살펴보겠습니다. 마지막으로 변증별 치료 알고리즘과 위험신호까지 다루겠습니다.\n\n【전환 멘트】\n그럼 첫 번째 파트, 왜 지금 손저림에 주목해야 하는지부터 시작하겠습니다.");
+})();
 
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "첫 이틀이 지나면, 이제 조금씩 움직여야 합니다. 아직 아픈데 움직여도 되나요? 걱정되시죠? 여러 연구에서 확인된 건, 계속 누워만 있으면 오히려 근육이 약해지고 회복이 느려진다는 거예요. 통증이 허락하는 범위에서 하루 15~30분 정도 가볍게 걸어보세요. 그리고 통증이 처음의 절반 이하로 줄었을 때, 다음에 알려드릴 스트레칭을 시작하시면 됩니다. 아프지 않은 범위에서 움직이기가 가장 좋은 전략이에요.\n\n" +
-    "【전환 멘트】\n" +
-    "통증이 좀 가라앉았다면, 이 세 가지 스트레칭을 해보세요."
-  );
-}
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 3 — 도입 질문 (TYPE-C, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide03() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "INTRODUCTION", false);
 
-// ─────────────────────────────────────────────
-// 슬라이드 13 — 스트레칭 ① 무릎 당기기 (TYPE-F, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "STRETCH 1", C.badgeBgLight, C.accentTeal);
-
-  slide.addText("스트레칭 1  무릎 당기기 (Knee-to-Chest)", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 26, bold: true, color: C.textPrimary, fontFace: F,
+  s.addText("\"선생님, 손이 저려요\"", {
+    x: 0.6, y: 0.8, w: 8.8, h: 1.1,
+    fontSize: 44, bold: true, color: C.textPrimary, fontFace: F,
+    align: "center", valign: "middle",
   });
 
-  addVline(slide, 0.6, 1.45, 0.6, C.accentTeal);
-  slide.addText("허리 뒤쪽 근육과 관절을 부드럽게 풀어줌 — 효과가 검증된 클래식 요통 스트레칭", {
-    x: 0.85, y: 1.45, w: 8.8, h: 0.55,
-    fontSize: 14, color: C.textMuted, fontFace: F,
+  hline(s, 2.0, 2.0, 6.0, C.textMuted);
+
+  s.addText("손저림(Hand Numbness/Tingling) = 감각 이상의 총칭", {
+    x: 0.6, y: 2.15, w: 8.8, h: 0.45,
+    fontSize: 18, bold: true, color: C.textPrimary, fontFace: F, align: "center",
   });
 
-  const steps = [
-    { num: "1", text: "바닥에 편하게 바로 눕기" },
-    { num: "2", text: "양 무릎을 가슴 쪽으로 천천히 당기기" },
-    { num: "3", text: "20~30초 유지" },
-    { num: "4", text: "3회 반복" },
+  var terms = [
+    { title: "지각이상", sub: "Paresthesia" },
+    { title: "감각저하", sub: "Hypoesthesia" },
+    { title: "이감각증", sub: "Dysesthesia" },
   ];
-
-  steps.forEach(function(s, i) {
-    const y = 2.2 + i * 0.65;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 6.0, h: 0.57,
+  terms.forEach(function(t, i) {
+    var x = 0.75 + i * 2.95;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 2.8, w: 2.6, h: 1.0,
       fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
     });
-    slide.addText(s.num, {
-      x: 0.75, y: y + 0.06, w: 0.4, h: 0.45,
-      fontSize: 16, bold: true, color: C.accentTeal, fontFace: F, align: "center", valign: "middle",
+    s.addText(t.title, {
+      x: x + 0.1, y: 2.88, w: 2.4, h: 0.42,
+      fontSize: 20, bold: true, color: C.textPrimary, fontFace: F, align: "center",
     });
-    slide.addText(s.text, {
-      x: 1.25, y: y + 0.06, w: 5.2, h: 0.45,
-      fontSize: 14, color: C.textPrimary, fontFace: F, valign: "middle",
-    });
-  });
-
-  // 오른쪽 정보 카드
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 6.9, y: 2.2, w: 2.7, h: 2.6,
-    fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-  });
-  slide.addShape(pptx.shapes.RECTANGLE, {
-    x: 6.9, y: 2.2, w: 2.7, h: 0.04,
-    fill: { color: C.accentTeal }, line: { color: C.accentTeal },
-  });
-  slide.addText("효과", {
-    x: 7.1, y: 2.28, w: 2.3, h: 0.4,
-    fontSize: 15, bold: true, color: C.accentTeal, fontFace: F,
-  });
-  slide.addText("허리 뒤쪽 근육과\n관절을 부드럽게\n풀어줌", {
-    x: 7.1, y: 2.72, w: 2.3, h: 1.0,
-    fontSize: 13, color: C.textPrimary, fontFace: F, wrap: true,
-  });
-  slide.addText("20~30초 x 3회", {
-    x: 7.1, y: 3.8, w: 2.3, h: 0.5,
-    fontSize: 18, bold: true, color: C.accentTeal, fontFace: F, align: "center",
-  });
-
-  slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-    x: 0.6, y: 4.9, w: 6.0, h: 0.45,
-    fill: { color: "FEF2F2" }, line: { color: C.accentDanger, width: 1 }, rectRadius: 0.18,
-  });
-  slide.addText("통증이 심해지면 즉시 멈추세요!", {
-    x: 0.7, y: 4.93, w: 5.8, h: 0.39,
-    fontSize: 13, bold: true, color: C.accentDanger, fontFace: F, align: "center", valign: "middle",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "첫 번째 스트레칭은 무릎 당기기예요. 바닥에 편하게 바로 누워서, 양 무릎을 가슴 쪽으로 천천히 당겨보세요. 이 자세를 20~30초 정도 유지하시고, 3번 반복하시면 됩니다. 이 동작은 허리 뒤쪽 근육과 관절을 부드럽게 풀어주는 효과가 있어요. 아주 클래식한 요통 스트레칭인데, 효과가 검증된 동작입니다. 다만 이 동작을 하다가 오히려 통증이 심해진다면, 아직 시기가 이른 거예요. 바로 멈추시고 며칠 뒤에 다시 시도해보세요.\n\n" +
-    "【전환 멘트】\n" +
-    "두 번째 스트레칭도 아주 쉽습니다."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 14 — 스트레칭 ② 고양이-소 자세 (TYPE-F, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
-
-  addBadgeCustom(slide, "STRETCH 2", C.badgeBg, C.textInverse);
-
-  slide.addText("스트레칭 2  고양이-소 자세 (Cat-Cow)", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 26, bold: true, color: C.textInverse, fontFace: F,
-  });
-
-  addVline(slide, 0.6, 1.45, 0.6, C.accentTeal);
-  slide.addText("허리 전체의 유연성 회복, 주변 근육 혈액 순환 개선 — 메이요 클리닉 권고 동작", {
-    x: 0.85, y: 1.45, w: 8.8, h: 0.55,
-    fontSize: 14, color: C.textMuted, fontFace: F,
-  });
-
-  const cards = [
-    { title: "자세",  body: "네발기기 자세\n(손과 무릎을 바닥에)" },
-    { title: "고양이 동작", body: "등을 위로 올려\n고양이처럼 둥글게 굽히기\n5초 유지" },
-    { title: "소 동작", body: "등을 아래로 내려\n소처럼 배 내밀기\n5초 유지" },
-    { title: "횟수",  body: "10회 반복\n천천히, 부드럽게\n통증 없는 범위에서" },
-  ];
-
-  cards.forEach(function(c, i) {
-    const x = 0.55 + i * 2.3;
-    addNavCard(slide, { x, y: 2.2, w: 2.1, h: 2.85, title: c.title, body: c.body, titleColor: C.accentTeal, titleSize: 14, bodySize: 13 });
-  });
-
-  slide.addText("천천히, 부드럽게, 아프지 않은 범위에서만 하세요!", {
-    x: 0.6, y: 5.2, w: 9.0, h: 0.3,
-    fontSize: 13, bold: true, color: C.accentSuccess, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "두 번째는 고양이-소 자세입니다. 이름이 재밌죠? 네발기기 자세에서, 등을 위로 올려서 고양이처럼 둥글게 만들었다가, 다시 아래로 내려서 소처럼 배를 늘어뜨리는 거예요. 고양이 5초, 소 5초, 이렇게 10번 반복하시면 됩니다. 이 동작은 허리 전체의 유연성을 회복시키고, 주변 근육에 혈액 순환을 좋게 해줘요. 메이요 클리닉, 클리블랜드 클리닉 같은 유명 병원에서도 추천하는 동작입니다. 천천히, 부드럽게, 아프지 않은 범위에서만 하세요.\n\n" +
-    "【전환 멘트】\n" +
-    "마지막 세 번째 스트레칭이에요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 15 — 스트레칭 ③ 골반 기울이기 (TYPE-E, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "STRETCH 3", C.badgeBgLight, C.accentTeal);
-
-  slide.addText("스트레칭 3  골반 기울이기 (Pelvic Tilt)", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 26, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  addVline(slide, 0.6, 1.45, 0.6, C.accentTeal);
-  slide.addText("복횡근(배 속 깊은 근육) 활성화 -> 허리 안정화의 기초 — 가장 안전한 코어 운동 입문!", {
-    x: 0.85, y: 1.45, w: 8.8, h: 0.55,
-    fontSize: 14, color: C.textMuted, fontFace: F,
-  });
-
-  const cards = [
-    { title: "자세",  body: "바닥에 바로 누워\n무릎 굽히기" },
-    { title: "동작",  body: "배에 힘 주어\n허리를 바닥에\n납작하게 붙이기" },
-    { title: "유지",  body: "5초 유지\nx 10회 반복" },
-    { title: "효과",  body: "복횡근 활성화\n허리 안정화 근육\n가장 안전한 코어 운동" },
-  ];
-
-  cards.forEach(function(c, i) {
-    const x = 0.55 + i * 2.3;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x, y: 2.2, w: 2.1, h: 2.85,
-      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
-    });
-    slide.addShape(pptx.shapes.RECTANGLE, {
-      x, y: 2.2, w: 2.1, h: 0.04,
-      fill: { color: C.accentSuccess }, line: { color: C.accentSuccess },
-    });
-    slide.addText(c.title, {
-      x: x + 0.15, y: 2.28, w: 1.8, h: 0.4,
-      fontSize: 14, bold: true, color: C.accentTeal, fontFace: F,
-    });
-    slide.addText(c.body, {
-      x: x + 0.12, y: 2.72, w: 1.86, h: 2.2,
-      fontSize: 13, color: C.textPrimary, fontFace: F, wrap: true,
+    s.addText(t.sub, {
+      x: x + 0.1, y: 3.32, w: 2.4, h: 0.38,
+      fontSize: 14, color: C.textMuted, fontFace: F, align: "center",
     });
   });
 
-  slide.addText("별것 아닌 것 같지만, 허리를 안정적으로 잡아주는 핵심 근육을 깨워줍니다", {
-    x: 0.6, y: 5.2, w: 9.0, h: 0.3,
-    fontSize: 13, italic: true, color: C.accentTeal, fontFace: F, align: "center",
+  s.addText("말초신경 포착부터 중추성 병변까지 — 스펙트럼이 넓다", {
+    x: 0.6, y: 4.05, w: 8.8, h: 0.45,
+    fontSize: 16, color: C.accentBrand, fontFace: F, align: "center", bold: true,
   });
 
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "세 번째는 골반 기울이기입니다. 바닥에 바로 누워서 무릎을 굽힌 다음, 배에 힘을 딱 주면서 허리를 바닥에 납작하게 붙여보세요. 5초 유지하고, 10번 반복합니다. 이게 별것 아닌 것 같지만, 우리 배 깊은 곳에 있는 복횡근이라는 근육을 깨워주는 아주 중요한 운동이에요. 이 근육이 허리를 안정적으로 잡아주는 코어 근육의 핵심입니다. 가장 안전한 코어 운동 입문 동작이니까, 허리가 아픈 분들도 부담 없이 시작할 수 있어요.\n\n" +
-    "【전환 멘트】\n" +
-    "여기까지가 집에서 하실 수 있는 셀프 케어였고요, 한의원에서는 어떤 치료를 해드리는지 궁금하시죠?"
-  );
-}
+  s.addNotes("【발표 멘트】\n여러분, 한 주에 \"손이 저려요\"라는 호소를 몇 번이나 들으십니까? 아마 손에 꼽기 어려우실 겁니다. 손저림은 의학적으로 지각이상(Paresthesia), 감각저하(Hypoesthesia), 이감각증(Dysesthesia)으로 세분되는데, 환자분들은 이 모든 걸 '저림'이라는 한 단어로 표현합니다. 문제는 이 단순한 증상 뒤에 수근관증후군부터 뇌졸중까지 매우 다양한 원인이 숨어 있다는 점입니다.\n\n【전환 멘트】\n그렇다면 실제로 어떤 질환들이 얼마나 흔한지, 역학 데이터를 살펴보겠습니다.");
+})();
 
-// ─────────────────────────────────────────────
-// 슬라이드 16 — 한의원에서는 뭘 해드리나요? (TYPE-H, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 4 — 역학: CTS (TYPE-G, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide04() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "EPIDEMIOLOGY", true);
+  addSectionTitle(s, "수근관증후군(CTS) — 역학 데이터", true);
 
-  addBadgeCustom(slide, "TREATMENT", C.badgeBg, C.textInverse);
-
-  slide.addText("한의원에서는 뭘 해드리나요?", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 28, bold: true, color: C.textInverse, fontFace: F,
+  s.addText("3.8%", {
+    x: 0.6, y: 1.55, w: 3.0, h: 1.1,
+    fontSize: 90, bold: true, color: C.accentSuccess, fontFace: F,
+    align: "center", valign: "middle",
   });
-
-  const treatments = [
-    {
-      title: "침 치료 (Acupuncture)",
-      titleColor: C.accentTeal,
-      body: "13개 연구(707명):\n통증 의미 있게 감소\n진통제 복용량도 줄어듦\n급성 허리 통증 중등도 근거",
-      lineColor: C.accentTeal,
-    },
-    {
-      title: "부항 치료 (Cupping)",
-      titleColor: "60A5FA",
-      body: "통증 및 기능장애\n의미 있게 개선\n(고~중등도 근거)\n경혈 부위 부항이 더 효과적",
-      lineColor: "60A5FA",
-    },
-    {
-      title: "추나 요법 (Chuna)",
-      titleColor: C.accentSuccess,
-      body: "194명 대상 국내 연구:\n통증 감소 효과 크기 0.96\n(큰 효과)\n일반 치료보다 2배 이상 감소",
-      lineColor: C.accentSuccess,
-    },
-  ];
-
-  treatments.forEach(function(t, i) {
-    const x = 0.5 + i * 3.1;
-    addNavCard(slide, { x, y: 1.55, w: 2.85, h: 3.5 });
-    addVline(slide, x + 0.05, 1.6, 3.4, t.lineColor);
-    slide.addText(t.title, {
-      x: x + 0.22, y: 1.65, w: 2.5, h: 0.45,
-      fontSize: 13, bold: true, color: t.titleColor, fontFace: F, wrap: true,
-    });
-    slide.addText(t.body, {
-      x: x + 0.22, y: 2.15, w: 2.5, h: 2.7,
-      fontSize: 12, color: C.textInverse, fontFace: F, wrap: true,
-    });
-  });
-
-  slide.addText("급성기: 침·부항 치료   |   회복기: 추나 요법 병행", {
-    x: 0.6, y: 5.2, w: 9.0, h: 0.3,
-    fontSize: 13, bold: true, color: C.accentTeal, fontFace: F, align: "center",
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "한의원에서는 세 가지 치료를 주로 해드립니다. 첫째, 침 치료. 13개 연구를 종합해보면, 침 치료가 허리 통증을 의미 있게 줄여주고, 진통제 복용량까지 줄여준다고 합니다. 둘째, 부항 치료. 피부에 컵을 붙여서 음압을 만드는 건데요, 통증과 기능장애를 의미 있게 개선해준다는 연구 결과가 있어요. 셋째, 추나 요법. 한의사가 직접 손으로 허리를 교정하는 치료인데요, 국내 194명 대상 연구에서 일반 치료만 할 때보다 통증이 2배 이상 감소하는 큰 효과가 확인됐습니다. 급성기에는 침과 부항을, 좀 가라앉은 회복기에는 추나 요법까지 병행하면 좋습니다.\n\n" +
-    "【전환 멘트】\n" +
-    "대부분은 이렇게 관리하면 좋아지지만, 꼭 주의해야 할 위험 신호가 있어요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 17 — 이럴 때는 바로 병원으로! (TYPE-D, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
-
-  addBadgeCustom(slide, "RED FLAG", C.accentDanger, C.textInverse);
-
-  slide.addText("이럴 때는 바로 병원으로! (Red Flag)", {
-    x: 0.6, y: 0.75, w: 8.8, h: 0.5,
-    fontSize: 28, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  slide.addText("즉시 응급실로!", {
-    x: 0.6, y: 1.4, w: 4.2, h: 0.38,
-    fontSize: 15, bold: true, color: C.accentDanger, fontFace: F,
-  });
-
-  const emergency = [
-    "항문·성기 주변 감각이 없어지는 느낌",
-    "갑자기 소변·대변을 참을 수 없음",
-    "한쪽 또는 양쪽 다리에 갑작스러운 마비·힘빠짐",
-    "허리 통증 + 고열 (38도 이상)",
-  ];
-
-  emergency.forEach(function(text, i) {
-    const y = 1.85 + i * 0.62;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 4.2, h: 0.54,
-      fill: { color: "FEF2F2" }, line: { color: C.accentDanger, width: 1 }, rectRadius: 0.18,
-    });
-    slide.addText(text, {
-      x: 0.7, y: y + 0.05, w: 4.0, h: 0.44,
-      fontSize: 12, color: C.accentDanger, fontFace: F, valign: "middle",
-    });
-  });
-
-  slide.addText("빠른 시일 내 병원 방문!", {
-    x: 5.2, y: 1.4, w: 4.4, h: 0.38,
-    fontSize: 15, bold: true, color: "B45309", fontFace: F,
-  });
-
-  const urgent = [
-    "교통사고·낙상 후 심한 허리 통증",
-    "암 병력이 있으면서 허리 통증",
-    "밤에 누워도 계속 악화되는 통증",
-    "설명 안 되는 체중 감소",
-    "다리 저림 + 힘이 빠지는 느낌",
-  ];
-
-  urgent.forEach(function(text, i) {
-    const y = 1.85 + i * 0.6;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 5.2, y, w: 4.4, h: 0.52,
-      fill: { color: "FFFBEB" }, line: { color: "F59E0B", width: 1 }, rectRadius: 0.18,
-    });
-    slide.addText(text, {
-      x: 5.3, y: y + 0.04, w: 4.2, h: 0.44,
-      fontSize: 12, color: "92400E", fontFace: F, valign: "middle",
-    });
-  });
-
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "여기서 아주 중요한 이야기를 하나 드려야 해요. 대부분의 허리 통증은 시간이 지나면 좋아지지만, 이런 증상이 있으면 반드시 바로 병원에 가셔야 합니다. 항문이나 성기 주변 감각이 없어지거나, 갑자기 소변이나 대변을 참을 수 없거나, 다리에 갑작스러운 마비가 오면 즉시 응급실에 가세요. 이건 마미증후군(척추 아래 신경 다발이 심하게 눌리는 것)이라는 심각한 상황일 수 있어요. 또 허리 통증과 함께 38도 이상 고열이 있어도 바로 가셔야 합니다. 그 외에도 밤에 누워있는데도 통증이 계속 심해지거나, 다리에 힘이 빠지는 느낌이 있으면, 빠른 시일 내에 진료를 받으세요.\n\n" +
-    "【전환 멘트】\n" +
-    "자, 급한 위험 신호를 확인했으니, 이제 허리가 다시 안 아프도록 예방하는 방법을 알아볼게요."
-  );
-}
-
-// ─────────────────────────────────────────────
-// 슬라이드 18 — 재발 방지, 허리 건강 지키기 (TYPE-E, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
-
-  addBadgeCustom(slide, "PREVENTION", C.badgeBg, C.textInverse);
-
-  slide.addText("재발 방지 — 허리 건강 지키기", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 28, bold: true, color: C.textInverse, fontFace: F,
-  });
-
-  addNavCard(slide, { x: 0.6, y: 1.4, w: 3.0, h: 1.5 });
-  slide.addText("12개월 내\n재발률", {
-    x: 0.7, y: 1.45, w: 2.8, h: 0.6,
+  s.addText("일반 성인 유병률", {
+    x: 0.6, y: 2.65, w: 3.0, h: 0.35,
     fontSize: 13, color: C.textMuted, fontFace: F, align: "center",
   });
-  slide.addText("73%", {
-    x: 0.7, y: 2.05, w: 2.8, h: 0.7,
-    fontSize: 44, bold: true, color: C.accentDanger, fontFace: F, align: "center",
+  s.addText("Atroshi et al. (1999, JAMA)", {
+    x: 0.6, y: 2.95, w: 3.0, h: 0.3,
+    fontSize: 11, color: C.textMuted, fontFace: F, align: "center",
   });
 
-  const strategies = [
-    { num: "01", text: "규칙적 운동: 걷기 + 수영 + 코어 운동 (주 3회 이상)" },
-    { num: "02", text: "30분마다 일어나기: 장시간 앉기 피하기" },
-    { num: "03", text: "물건 들 때 무릎 굽히기 습관화" },
-    { num: "04", text: "금연: 흡연이 디스크 퇴행을 가속화" },
-    { num: "05", text: "적정 체중 유지: 복부 비만이 허리 부담 증가" },
+  var stats = [
+    { title: "여성 3배", body: "남성 대비 발생률\n40~60대 집중" },
+    { title: "20만 명+", body: "한국 HIRA 2022년\n연간 진료 인원" },
+    { title: "10~15%", body: "반복 작업 직군\n유병률 (임신 중 43%까지)" },
   ];
-
-  strategies.forEach(function(s, i) {
-    const y = 1.4 + i * 0.74;
-    addNavCard(slide, { x: 3.8, y, w: 5.8, h: 0.65 });
-    addVline(slide, 3.85, y + 0.1, 0.45, C.accentSuccess);
-    slide.addText(s.num, {
-      x: 4.05, y: y + 0.1, w: 0.5, h: 0.45,
-      fontSize: 13, bold: true, color: C.accentSuccess, fontFace: F, align: "center", valign: "middle",
-    });
-    slide.addText(s.text, {
-      x: 4.6, y: y + 0.1, w: 4.9, h: 0.45,
-      fontSize: 13, color: C.textInverse, fontFace: F, valign: "middle",
+  stats.forEach(function(st, i) {
+    addCard(s, {
+      x: 4.2 + i * 1.95, y: 1.5, w: 1.75, h: 2.5,
+      isDark: true, title: st.title, body: st.body,
     });
   });
 
-  slide.addText("예방이 치료보다 훨씬 쉽습니다 — 지금부터 시작하세요!", {
-    x: 0.6, y: 5.2, w: 9.0, h: 0.3,
-    fontSize: 13, italic: true, color: C.accentTeal, fontFace: F, align: "center",
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 0.6, y: 4.15, w: 8.8, h: 0.85,
+    fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.22,
+  });
+  s.addText("경추 신경근병증(Cervical Radiculopathy)  |  연간 인구 10만 명당 83.2명  |  C6·C7 신경근 70% 이상", {
+    x: 0.8, y: 4.25, w: 8.4, h: 0.6,
+    fontSize: 14, color: C.textInverse, fontFace: F, align: "center", valign: "middle",
   });
 
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "한 가지 솔직하게 말씀드릴 게 있어요. 급성 허리 통증은 재발률이 좀 높습니다. 연구에 따르면 12개월 내 재발률이 73%나 돼요. 그래서 예방이 정말 중요합니다. 다섯 가지만 기억하세요. 첫째, 규칙적으로 운동하기. 걷기, 수영, 앞서 배운 코어 운동을 주 3회 이상 꾸준히 하세요. 이게 가장 중요합니다. 둘째, 30분마다 일어나서 한 번씩 움직여주세요. 셋째, 물건 들 때 무릎 굽히는 습관을 들이세요. 넷째, 담배를 피우신다면 금연을 고려해주세요. 흡연이 디스크 퇴행을 빠르게 만듭니다. 다섯째, 적정 체중을 유지하세요. 배가 나오면 허리에 부담이 커집니다.\n\n" +
-    "【전환 멘트】\n" +
-    "마지막으로, 오늘 내용을 한 장으로 정리해드릴게요."
-  );
-}
+  s.addNotes("【발표 멘트】\n역학 데이터를 보면, 수근관증후군은 Atroshi 등의 JAMA 연구에서 일반 성인 유병률이 약 3.8%로 보고되었습니다. 여성이 남성보다 3배 높고, 건강보험심사평가원 자료에서도 2022년 기준 약 20만 명 이상이 진료를 받았습니다. 반복적인 손목 사용 직군에서는 유병률이 10~15%까지 올라갑니다. 경추 신경근병증도 인구 10만 명당 연간 83.2명으로 적지 않은 빈도이며, C6와 C7 신경근이 전체의 70% 이상을 차지합니다.\n\n【전환 멘트】\nCTS와 경추 신경근병증 외에도 반드시 알아야 할 원인 질환들이 더 있습니다.");
+})();
 
-// ─────────────────────────────────────────────
-// 슬라이드 19 — 핵심 요약 (TYPE-B, Light)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgLight };
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 5 — 역학: 기타 원인 (TYPE-D, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide05() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "EPIDEMIOLOGY", false);
+  addSectionTitle(s, "그 밖의 주요 원인 질환", false);
 
-  addBadgeCustom(slide, "SUMMARY", C.badgeBgLight, C.accentTeal);
-
-  slide.addText("오늘의 핵심 요약", {
-    x: 0.6, y: 0.75, w: 8.0, h: 0.5,
-    fontSize: 30, bold: true, color: C.textPrimary, fontFace: F,
-  });
-
-  const summaryItems = [
-    { num: "01", text: "급성 허리 통증 90% = 근육·인대 손상 -> 대부분 4~6주 내 회복", numColor: C.accentTeal },
-    { num: "02", text: "급성기(1~2일): 온찜질 + 적절한 휴식 + 가벼운 활동", numColor: C.accentTeal },
-    { num: "03", text: "48시간 이상 누워만 있지 마세요! -> 근육 약화 + 회복 지연", numColor: C.accentDanger },
-    { num: "04", text: "통증 50% 줄면: 무릎 당기기 -> 고양이-소 -> 골반 기울이기", numColor: C.accentTeal },
-    { num: "05", text: "한의원: 침·부항(급성기) + 추나(회복기) | 위험 신호 시 즉시 응급실!", numColor: C.accentSuccess },
+  var cards = [
+    {
+      title: "흉곽출구증후군\n(TOS)",
+      body: "유병률 0.3~2%\n신경성 TOS 95% 이상\n20~40대 여성·사무직 호발",
+    },
+    {
+      title: "당뇨병성\n말초신경병증(DPN)",
+      body: "당뇨 환자 약 50%에서 발생\n(Boulton et al., 2005, Lancet)\n양측 대칭 장갑·양말형 분포",
+    },
+    {
+      title: "레이노 현상\n(Raynaud Phenomenon)",
+      body: "여성 ~20%, 남성 ~11%\n원발성이 이차성보다 4배\n한랭 자극 → 혈관 과수축",
+    },
   ];
 
-  summaryItems.forEach(function(item, i) {
-    const y = 1.5 + i * 0.72;
-    slide.addShape(pptx.shapes.ROUNDED_RECTANGLE, {
-      x: 0.6, y, w: 8.8, h: 0.64,
+  cards.forEach(function(c, i) {
+    addCard(s, {
+      x: 0.6 + i * 3.15, y: 1.65, w: 2.9, h: 2.8,
+      isDark: false, title: c.title, body: c.body,
+    });
+  });
+
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 0.6, y: 4.65, w: 8.8, h: 0.68,
+    fill: { color: C.cardLight },
+    line: { color: C.accentBrand, pt: 2 }, rectRadius: 0.22,
+  });
+  s.addText("임상 5대 원인: CTS · 경추 신경근병증 · TOS · DPN · 레이노 현상", {
+    x: 0.8, y: 4.72, w: 8.4, h: 0.52,
+    fontSize: 15, bold: true, color: C.accentBrand, fontFace: F, align: "center", valign: "middle",
+  });
+
+  s.addNotes("【발표 멘트】\nCTS와 경추 질환 외에 세 가지 더 기억하셔야 합니다. 흉곽출구증후군은 유병률 0.3~2%로 낮아 보이지만, 20~40대 사무직 여성에서 호발하므로 놓치기 쉽습니다. 당뇨병성 말초신경병증은 당뇨 환자의 절반에서 발생하는데, Boulton 등의 Lancet 논문에서 확인된 수치입니다. 양측 대칭성의 장갑·양말형 분포가 특징입니다. 레이노 현상은 여성에서 약 20%까지 보고될 정도로 흔하며, 한랭 자극에 의한 혈관 수축이 핵심 기전입니다.\n\n【전환 멘트】\n이제 각 질환의 병태생리를 해부학적으로 좀 더 깊이 들어가 보겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 6 — CTS 해부학 다이어그램 (TYPE-H, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide06() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "ANATOMY", true);
+  addSectionTitle(s, "수근관증후군(CTS) — 해부학과 병태생리", true);
+
+  // 수근관 단면 다이어그램
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 0.6, y: 1.6, w: 4.0, h: 2.5,
+    fill: { color: C.cardDark }, line: { color: "4B5563" }, rectRadius: 0.3,
+  });
+  s.addText("수근관(Carpal Tunnel) 단면도", {
+    x: 0.7, y: 1.65, w: 3.8, h: 0.32,
+    fontSize: 11, color: C.textMuted, fontFace: F, align: "center",
+  });
+  // 횡수근인대
+  s.addShape(pptx.ShapeType.rect, {
+    x: 0.85, y: 2.0, w: 3.5, h: 0.28,
+    fill: { color: C.accentBrand }, line: { color: C.accentBrand },
+  });
+  s.addText("횡수근인대 (Flexor Retinaculum)", {
+    x: 0.85, y: 2.0, w: 3.5, h: 0.28,
+    fontSize: 10, color: C.textInverse, fontFace: F, align: "center", valign: "middle",
+  });
+  // 정중신경
+  s.addShape(pptx.ShapeType.ellipse, {
+    x: 1.5, y: 2.4, w: 0.85, h: 0.55,
+    fill: { color: C.accentDanger }, line: { color: C.accentDanger },
+  });
+  s.addText("정중\n신경", {
+    x: 1.5, y: 2.4, w: 0.85, h: 0.55,
+    fontSize: 9, bold: true, color: C.textInverse, fontFace: F,
+    align: "center", valign: "middle",
+  });
+  // 굴곡건들
+  var tendonPos = [
+    [2.5, 2.42], [3.0, 2.42], [3.5, 2.42],
+    [2.5, 2.92], [3.0, 2.92], [3.5, 2.92],
+    [2.5, 3.42], [3.0, 3.42], [3.5, 3.42],
+  ];
+  tendonPos.forEach(function(pos) {
+    s.addShape(pptx.ShapeType.ellipse, {
+      x: pos[0], y: pos[1], w: 0.35, h: 0.35,
+      fill: { color: "6B7280" }, line: { color: "9CA3AF" },
+    });
+  });
+  s.addText("굴곡건 9개", {
+    x: 2.35, y: 3.8, w: 1.3, h: 0.22,
+    fontSize: 10, color: C.textMuted, fontFace: F, align: "center",
+  });
+
+  // 압력 데이터
+  var pressureData = [
+    { label: "정상 내압", value: "2.5 mmHg", color: C.accentSuccess },
+    { label: "CTS 안정 시", value: "32 mmHg", color: C.accentDanger },
+    { label: "손목 굴곡 시", value: "90+ mmHg", color: C.accentDanger },
+  ];
+  pressureData.forEach(function(pd, i) {
+    var y = 1.65 + i * 0.9;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: 4.85, y: y, w: 4.75, h: 0.78,
+      fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.22,
+    });
+    s.addText(pd.label, {
+      x: 5.05, y: y + 0.08, w: 2.0, h: 0.3,
+      fontSize: 12, color: C.textMuted, fontFace: F, valign: "middle",
+    });
+    s.addText(pd.value, {
+      x: 7.1, y: y + 0.08, w: 2.3, h: 0.55,
+      fontSize: 28, bold: true, color: pd.color, fontFace: F,
+      align: "right", valign: "middle",
+    });
+  });
+
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 4.85, y: 4.35, w: 4.75, h: 0.72,
+    fill: { color: "2A1A1A" }, line: { color: C.accentDanger, pt: 1.5 }, rectRadius: 0.22,
+  });
+  s.addText("압박 → 탈수초(Demyelination) → 1~3번째 손가락 + 4번째 내측 반쪽 저림", {
+    x: 5.0, y: 4.42, w: 4.45, h: 0.55,
+    fontSize: 12, color: C.accentDanger, fontFace: F, valign: "middle", wrap: true,
+  });
+
+  s.addNotes("【발표 멘트】\n수근관증후군의 해부학을 정리해 보겠습니다. 수근관은 손목의 수근골과 횡수근인대가 만드는 폐쇄된 터널입니다. 이 좁은 공간 안에 정중신경 하나와 굴곡건 9개가 함께 들어있습니다. Szabo와 Chidgey의 연구에 따르면, 정상인의 수근관 내압은 겨우 2.5 mmHg인데 CTS 환자에서는 안정 시에도 32 mmHg, 손목을 굴곡하면 90 mmHg 이상으로 급등합니다. 이 압력이 정중신경의 탈수초를 일으켜 엄지부터 넷째 손가락 내측까지의 저림이 발생합니다.\n\n【전환 멘트】\n다음으로, 경추에서 오는 손저림의 해부학적 배경을 보겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 7 — 피부분절 (TYPE-H, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide07() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "ANATOMY", false);
+  addSectionTitle(s, "경추 신경근병증 — 피부분절(Dermatome)", false);
+
+  // 피부분절 시각화
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 0.6, y: 1.55, w: 3.5, h: 3.4,
+    fill: { color: "FFF5E0" }, line: { color: C.textMuted }, rectRadius: 0.4,
+  });
+  s.addText("상지 피부분절 (Dermatome)", {
+    x: 0.7, y: 1.65, w: 3.3, h: 0.4,
+    fontSize: 11, color: C.textMuted, fontFace: F, align: "center",
+  });
+
+  var dermZones = [
+    { label: "C5", sub: "상완 외측", color: "D1FAE5" },
+    { label: "C6", sub: "엄지·검지", color: "6EE7B7" },
+    { label: "C7", sub: "중지", color: C.accentBrand },
+    { label: "C8", sub: "약지·소지", color: C.accentDanger },
+    { label: "T1", sub: "상완 내측", color: "9CA3AF" },
+  ];
+  dermZones.forEach(function(z, i) {
+    var y = 2.18 + i * 0.55;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: 0.75, y: y, w: 3.2, h: 0.44,
+      fill: { color: z.color }, line: { color: z.color }, rectRadius: 0.1,
+    });
+    var txtColor = (z.label === "C7" || z.label === "C8") ? C.textInverse : C.textPrimary;
+    s.addText(z.label + "  —  " + z.sub, {
+      x: 0.85, y: y + 0.05, w: 3.0, h: 0.34,
+      fontSize: 13, bold: true, color: txtColor, fontFace: F, valign: "middle",
+    });
+  });
+
+  // 우측 메커니즘 카드
+  var mechanisms = [
+    { num: "01", title: "추간판 탈출(HNP)", body: "수핵이 후방 돌출 → 신경근 직접 압박" },
+    { num: "02", title: "골극·후관절 압박", body: "퇴행성 변화 → 신경공(Foramen) 협착" },
+    { num: "03", title: "염증성 사이토카인", body: "IL-1β, TNF-α → 신경근 과흥분 → 통증·저림" },
+  ];
+  mechanisms.forEach(function(m, i) {
+    var y = 1.55 + i * 1.3;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: 4.35, y: y, w: 5.25, h: 1.15,
       fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
     });
-    slide.addText(item.num, {
-      x: 0.75, y: y + 0.06, w: 0.55, h: 0.52,
-      fontSize: 20, bold: true, color: item.numColor, fontFace: F, align: "center", valign: "middle",
+    s.addText(m.num, {
+      x: 4.55, y: y + 0.1, w: 0.5, h: 0.4,
+      fontSize: 18, bold: true, color: C.accentBrand, fontFace: F,
     });
-    addVline(slide, 1.35, y + 0.1, 0.44, item.numColor);
-    slide.addText(item.text, {
-      x: 1.55, y: y + 0.1, w: 7.6, h: 0.44,
-      fontSize: 13, color: C.textPrimary, fontFace: F, valign: "middle",
+    s.addText(m.title, {
+      x: 5.1, y: y + 0.1, w: 4.3, h: 0.4,
+      fontSize: 16, bold: true, color: C.textPrimary, fontFace: F,
+    });
+    s.addText(m.body, {
+      x: 4.55, y: y + 0.55, w: 4.85, h: 0.48,
+      fontSize: 13, color: C.textMuted, fontFace: F, wrap: true,
     });
   });
 
-  slide.addText("한의원 치료 + 바른 자세 + 꾸준한 운동 = 건강한 허리", {
-    x: 0.6, y: 5.2, w: 9.0, h: 0.32,
-    fontSize: 14, bold: true, color: C.accentTeal, fontFace: F, align: "center",
+  s.addNotes("【발표 멘트】\n경추에서 오는 손저림을 감별하려면 피부분절 지도를 반드시 숙지하셔야 합니다. 엄지와 검지 저림이면 C6, 중지 저림이면 C7, 약지와 소지 저림이면 C8을 먼저 의심합니다. 기전은 추간판 탈출이나 골극에 의한 신경근 직접 압박이 가장 흔하고, 여기에 IL-1β나 TNF-α 같은 염증성 사이토카인이 신경근 과흥분을 유발합니다.\n\n【전환 멘트】\n같은 내측 손가락 저림이라도 경추가 아닌 흉곽출구에서 문제가 생기는 경우도 있습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 8 — TOS·레이노·DPN (TYPE-B, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide08() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "PATHOPHYSIOLOGY", true);
+  addSectionTitle(s, "흉곽출구증후군·레이노·DPN 기전", true);
+
+  var cards = [
+    {
+      title: "흉곽출구증후군(TOS)",
+      body: "사각근 삼각 → 완신경총 압박\nC8·T1 → 내측 전완·소지 저림\n경늑골·사각근 비대·불량 자세 유발",
+    },
+    {
+      title: "레이노 현상(Raynaud)",
+      body: "한랭·스트레스 → 교감신경 과활성\n지단 혈관 과수축\n창백(허혈) → 청색(정체) → 충혈(재관류)",
+    },
+    {
+      title: "당뇨병성 신경병증(DPN)",
+      body: "고혈당 → 소르비톨 축적 + 산화 스트레스\n신경 혈류 장애 → 탈수초\n장갑·양말형(Glove-Stocking) 양측 대칭",
+    },
+  ];
+
+  cards.forEach(function(c, i) {
+    addCard(s, {
+      x: 0.6 + i * 3.15, y: 1.6, w: 2.9, h: 3.3,
+      isDark: true, title: c.title, body: c.body,
+    });
   });
 
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "오늘 내용을 정리해드릴게요. 급성 허리 통증의 90%는 근육이나 인대가 살짝 다친 거예요. 대부분 4~6주면 좋아집니다. 급성기에는 온찜질 하면서 적절히 쉬시되, 이틀 넘게 꼼짝도 않고 누워있지는 마세요. 통증이 반 이상 줄면 오늘 배운 세 가지 스트레칭을 시작하시고요. 한의원에서 침, 부항, 추나 치료를 병행하시면 더 빨리 회복됩니다. 그리고 재발 방지를 위해 꾸준한 운동과 올바른 자세 습관을 꼭 만들어가세요. 다만 항문 감각 소실, 대소변 장애, 다리 마비, 고열이 있으면 반드시 즉시 응급실에 가셔야 합니다!\n\n" +
-    "【전환 멘트】\n" +
-    "마지막으로 한 말씀 드리겠습니다."
-  );
-}
+  s.addNotes("【발표 멘트】\n흉곽출구증후군은 사각근 삼각이라는 좁은 통로에서 완신경총과 쇄골하동맥이 압박되는 질환입니다. 특히 신경성 TOS에서는 하완신경총의 C8·T1 분지가 눌리면서 내측 전완과 소지 쪽 저림이 나타납니다. 레이노 현상은 한랭 자극에 의해 손가락 혈관이 과수축되면서 창백-청색-충혈의 3단계 색 변화를 보이는 것이 특징입니다. 당뇨병성 말초신경병증은 고혈당에 의한 대사성 신경 손상으로, 장갑·양말형의 양측 대칭 분포가 감별 포인트입니다.\n\n【전환 멘트】\n원인 질환을 이해했으니, 이제 외래에서 실제로 어떻게 감별하는지 이학적 검사를 정리하겠습니다.");
+})();
 
-// ─────────────────────────────────────────────
-// 슬라이드 20 — 능골한의원 안내 / 마무리 (TYPE-A, Dark)
-// ─────────────────────────────────────────────
-{
-  const slide = pptx.addSlide();
-  slide.background = { color: C.bgDarkNav };
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 9 — 병력 청취 (TYPE-F, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide09() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "DIAGNOSIS", false);
+  addSectionTitle(s, "병력 청취 — 6가지 핵심 항목", false);
 
-  slide.addShape(pptx.shapes.RECTANGLE, {
-    x: 9.5, y: 0, w: 0.5, h: 5.63,
-    fill: { color: C.accentTeal }, line: { color: C.accentTeal },
+  vline(s, 0.6, 1.55, 0.75, C.accentBrand);
+  s.addText("체계적 병력 청취만으로 원인의 범위를 크게 좁힐 수 있다", {
+    x: 0.85, y: 1.55, w: 8.55, h: 0.75,
+    fontSize: 17, color: C.textPrimary, fontFace: F,
+    italic: true, valign: "middle", wrap: true,
   });
 
-  slide.addText("허리가 아프면,\n능골한의원과\n함께하세요", {
-    x: 1.0, y: 0.9, w: 8.0, h: 2.0,
-    fontSize: 36, bold: true, color: C.textInverse, fontFace: F,
-    align: "center", wrap: true,
+  var items = [
+    { num: "1", q: "저림 분포", ans: "손 전체 vs 특정 손가락 → 신경지배 영역 확인" },
+    { num: "2", q: "야간 악화", ans: "CTS의 특징적 소견 (손목 굴곡위 수면)" },
+    { num: "3", q: "경부 통증 동반", ans: "경추 병변 시사" },
+    { num: "4", q: "양측성 여부", ans: "중추성, DPN, TOS 가능성" },
+    { num: "5", q: "색 변화", ans: "레이노 현상 시사 (창백→청색→충혈)" },
+    { num: "6", q: "직업·취미", ans: "반복 손목 사용, 진동 노출" },
+  ];
+
+  items.forEach(function(item, i) {
+    var col = i < 3 ? 0 : 1;
+    var row = i % 3;
+    var x = 0.6 + col * 4.75;
+    var y = 2.55 + row * 0.82;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: y, w: 4.55, h: 0.72,
+      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.18,
+    });
+    s.addText(item.num + ". " + item.q, {
+      x: x + 0.15, y: y + 0.07, w: 1.7, h: 0.28,
+      fontSize: 13, bold: true, color: C.textPrimary, fontFace: F,
+    });
+    s.addText(item.ans, {
+      x: x + 0.15, y: y + 0.36, w: 4.2, h: 0.28,
+      fontSize: 12, color: C.textMuted, fontFace: F,
+    });
   });
 
-  slide.addText("침 · 부항 · 추나 — 근거 중심 한의 치료", {
-    x: 1.0, y: 3.1, w: 8.0, h: 0.5,
-    fontSize: 18, color: C.textMuted, fontFace: F, align: "center",
+  s.addNotes("【발표 멘트】\n감별 진단의 첫 단계는 역시 병력 청취입니다. 여섯 가지만 확인하면 원인의 범위를 상당히 좁힐 수 있습니다. 첫째, 어떤 손가락이 저린지. 엄지~넷째 내측이면 정중신경, 소지 쪽이면 척골신경이나 C8 문제를 생각합니다. 둘째, 야간에 악화되는지. 야간 저림은 CTS의 매우 특징적인 소견입니다. 셋째, 목 통증이 동반되는지. 넷째, 양쪽 다 저린지. 다섯째, 색 변화가 있는지. 여섯째, 반복적인 손목 사용 직업인지.\n\n【전환 멘트】\n병력 청취 다음에는 이학적 검사로 확인해야 합니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 10 — 이학적 검사 (TYPE-H, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide10() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "PHYSICAL EXAM", true);
+  addSectionTitle(s, "이학적 검사 — Phalen · Tinel · Spurling", true);
+
+  var tests = [
+    {
+      name: "Phalen Test", target: "CTS",
+      method: "손목 최대 굴곡 90°\n1분 유지",
+      positive: "정중신경 영역 저림 재현",
+      sens: "68~80%", spec: "59~86%", color: C.accentSuccess,
+    },
+    {
+      name: "Tinel Sign", target: "CTS",
+      method: "수근관 위 정중신경 타진",
+      positive: "전기 자극감 방사",
+      sens: "50~72%", spec: "55~87%", color: C.accentSuccess,
+    },
+    {
+      name: "Spurling Test", target: "경추 신경근병증",
+      method: "환측 측방 굴곡 + 신전\n+ 축성 압박",
+      positive: "동측 상지 방사통·저림 재현",
+      sens: "40~60%", spec: "92~100%", color: C.accentDanger,
+    },
+  ];
+
+  tests.forEach(function(t, i) {
+    var x = 0.6 + i * 3.15;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 1.55, w: 2.95, h: 3.6,
+      fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.22,
+    });
+    s.addText(t.name, {
+      x: x + 0.15, y: 1.68, w: 2.65, h: 0.42,
+      fontSize: 18, bold: true, color: t.color, fontFace: F,
+    });
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x + 0.15, y: 2.12, w: 2.65, h: 0.28,
+      fill: { color: C.badgeBg }, line: { color: C.badgeBg }, rectRadius: 0.1,
+    });
+    s.addText(t.target, {
+      x: x + 0.15, y: 2.12, w: 2.65, h: 0.28,
+      fontSize: 11, color: C.textInverse, fontFace: F, align: "center", valign: "middle",
+    });
+    s.addText("방법", {
+      x: x + 0.15, y: 2.52, w: 2.65, h: 0.25,
+      fontSize: 11, color: C.textMuted, fontFace: F,
+    });
+    s.addText(t.method, {
+      x: x + 0.15, y: 2.77, w: 2.65, h: 0.45,
+      fontSize: 13, color: C.textInverse, fontFace: F, wrap: true,
+    });
+    s.addText("양성 소견", {
+      x: x + 0.15, y: 3.25, w: 2.65, h: 0.25,
+      fontSize: 11, color: C.textMuted, fontFace: F,
+    });
+    s.addText(t.positive, {
+      x: x + 0.15, y: 3.5, w: 2.65, h: 0.38,
+      fontSize: 13, color: C.textInverse, fontFace: F, wrap: true,
+    });
+    s.addText("민감도 " + t.sens + "  |  특이도 " + t.spec, {
+      x: x + 0.1, y: 4.6, w: 2.75, h: 0.3,
+      fontSize: 11, color: t.color, fontFace: F, align: "center",
+    });
   });
 
-  slide.addShape(pptx.shapes.RECTANGLE, {
-    x: 3.5, y: 3.75, w: 3.0, h: 0.03,
-    fill: { color: C.accentTeal }, line: { color: C.accentTeal },
+  s.addNotes("【발표 멘트】\n외래에서 바로 시행할 수 있는 이학적 검사 세 가지입니다. 먼저 Phalen Test, 손목을 최대 굴곡해서 1분간 유지하면 정중신경 영역에 저림이 유발됩니다. 민감도가 68~80%로 상당히 쓸 만합니다. Tinel Sign은 수근관 위를 타진해서 전기 자극감이 방사되는지 확인합니다. 경추 쪽을 볼 때는 Spurling Test가 핵심입니다. 특이도가 92~100%로 매우 높아, 양성이면 경추 신경근병증일 가능성이 매우 높습니다.\n\n【전환 멘트】\n이제 이 검사 결과들을 종합해서 감별 포인트를 한 눈에 정리해 보겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 11 — 감별 진단 요약표 (TYPE-F, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide11() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "DIFFERENTIAL DX", false);
+
+  vline(s, 0.6, 0.72, 0.7, C.accentBrand);
+  s.addText("감별 진단 요약 — 6가지 질환 체크리스트", {
+    x: 0.85, y: 0.72, w: 8.55, h: 0.7,
+    fontSize: 30, bold: true, color: C.textPrimary, fontFace: F, valign: "middle",
   });
 
-  slide.addText("능골한의원", {
-    x: 1.0, y: 3.9, w: 8.0, h: 0.5,
-    fontSize: 22, bold: true, color: C.accentTeal, fontFace: F, align: "center",
+  // 헤더 행
+  s.addShape(pptx.ShapeType.rect, {
+    x: 0.6, y: 1.55, w: 8.8, h: 0.3,
+    fill: { color: C.accentBrand }, line: { color: C.accentBrand },
+  });
+  ["질환", "특징적 소견", "핵심 검사"].forEach(function(h, i) {
+    var xs = [0.7, 3.4, 7.5];
+    s.addText(h, {
+      x: xs[i], y: 1.59, w: 2.5, h: 0.22,
+      fontSize: 11, bold: true, color: C.textInverse, fontFace: F,
+    });
   });
 
-  slide.addText("감사합니다", {
-    x: 1.0, y: 4.5, w: 8.0, h: 0.5,
-    fontSize: 20, color: C.textMuted, fontFace: F, align: "center",
+  var rows = [
+    { disease: "수근관증후군(CTS)", feature: "야간 저림, 엄지~4번째, Phalen (+)", test: "NCS/EMG", color: C.accentSuccess },
+    { disease: "경추 신경근병증", feature: "경부통, 분절별 분포, Spurling (+)", test: "MRI 경추", color: C.accentBrand },
+    { disease: "흉곽출구증후군(TOS)", feature: "팔 거상 시 악화, Adson (+)", test: "혈관초음파", color: C.accentBrand },
+    { disease: "당뇨병성 신경병증(DPN)", feature: "양측 대칭, 당뇨 병력, 장갑형", test: "NCS + HbA1c", color: C.textMuted },
+    { disease: "레이노 현상", feature: "한랭 유발, 3상 색 변화", test: "냉각 유발 검사", color: C.textMuted },
+    { disease: "뇌졸중 (즉시 의뢰)", feature: "편측 전체 저림 + 신경학적 징후", test: "뇌 MRI/CT", color: C.accentDanger },
+  ];
+
+  rows.forEach(function(r, i) {
+    var y = 1.87 + i * 0.6;
+    var bgCol = i % 2 === 0 ? C.cardLight : "F0EBE0";
+    s.addShape(pptx.ShapeType.rect, {
+      x: 0.6, y: y, w: 8.8, h: 0.55,
+      fill: { color: bgCol }, line: { color: bgCol },
+    });
+    s.addText(r.disease, {
+      x: 0.7, y: y + 0.09, w: 2.6, h: 0.36,
+      fontSize: 12, bold: true, color: r.color, fontFace: F,
+    });
+    s.addText(r.feature, {
+      x: 3.4, y: y + 0.09, w: 4.0, h: 0.36,
+      fontSize: 12, color: C.textPrimary, fontFace: F,
+    });
+    s.addText(r.test, {
+      x: 7.5, y: y + 0.09, w: 1.8, h: 0.36,
+      fontSize: 12, color: C.textMuted, fontFace: F,
+    });
   });
 
-  slide.addNotes(
-    "【발표 멘트】\n" +
-    "오늘 알려드린 셀프 케어 방법들, 집에서 바로 실천해보세요. 급성기에 온찜질 하시면서 가볍게 움직이시고, 통증이 줄면 스트레칭을 시작하시면 됩니다. 그리고 혼자 관리가 어려우시거나, 통증이 좀처럼 안 줄 때는 언제든 능골한의원에 오세요. 침, 부항, 추나 치료로 회복을 도와드리겠습니다. 오늘 강의 들어주셔서 감사합니다. 허리 건강하게, 즐거운 일상 보내세요!\n\n" +
-    "【전환 멘트】\n" +
-    "(강의 종료)"
-  );
-}
+  s.addNotes("【발표 멘트】\n이 표를 한 번 머릿속에 넣어두시면 외래에서 큰 도움이 됩니다. CTS는 야간 저림이 키워드이고, 경추 신경근병증은 경부통과 분절별 분포가 핵심입니다. TOS는 팔을 올렸을 때 악화되는 패턴, DPN은 양측 대칭의 장갑형 분포, 레이노는 한랭에 의한 3상 색 변화가 감별 포인트입니다. 가장 중요한 것은 편측 전체 저림에 다른 신경학적 징후가 동반되면 뇌졸중을 의심해야 한다는 점입니다.\n\n【전환 멘트】\n감별이 끝났으면, 이제 우리 한의사가 가장 궁금한 부분, 치료 근거로 넘어가겠습니다.");
+})();
 
-// ─────────────────────────────────────────────
-// PPTX 저장
-// ─────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 12 — 침치료 근거: CTS (TYPE-G, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide12() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "EVIDENCE", true);
+  addSectionTitle(s, "침치료(Acupuncture) — CTS 메타분석 근거", true);
+
+  s.addText("622", {
+    x: 0.6, y: 1.55, w: 3.0, h: 1.1,
+    fontSize: 90, bold: true, color: C.accentSuccess, fontFace: F,
+    align: "center", valign: "middle",
+  });
+  s.addText("명 분석 (12개 RCT)", {
+    x: 0.6, y: 2.65, w: 3.0, h: 0.35,
+    fontSize: 13, color: C.textMuted, fontFace: F, align: "center",
+  });
+  s.addText("Yao et al. (2020)", {
+    x: 0.6, y: 2.95, w: 3.0, h: 0.3,
+    fontSize: 11, color: C.textMuted, fontFace: F, align: "center",
+  });
+
+  var evidCards = [
+    { title: "VAS 통증 유의 개선", body: "MD −1.36\n(95% CI −2.12 ~ −0.61)\n침치료 vs 위약 비교" },
+    { title: "전기침 병합 효과 우수", body: "단독 침치료보다\nElectroacupuncture 병합 시\n더 우수한 결과" },
+    { title: "근거 수준 I~II", body: "경증~중등도 CTS 유효\n부목·스테로이드 주사와\n동등 수준" },
+  ];
+  evidCards.forEach(function(ec, i) {
+    addCard(s, {
+      x: 3.8 + i * 2.1, y: 1.55, w: 1.95, h: 2.8,
+      isDark: true, title: ec.title, body: ec.body,
+    });
+  });
+
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 0.6, y: 4.55, w: 8.8, h: 0.72,
+    fill: { color: "0A3020" }, line: { color: C.accentSuccess, pt: 1.5 }, rectRadius: 0.22,
+  });
+  s.addText("임상 적용: 경증~중등도 CTS 환자에게 침치료를 1차 옵션으로 제안 가능", {
+    x: 0.8, y: 4.62, w: 8.4, h: 0.55,
+    fontSize: 15, bold: true, color: C.accentSuccess, fontFace: F,
+    align: "center", valign: "middle",
+  });
+
+  s.addNotes("【발표 멘트】\n한의학 치료 근거, 먼저 수근관증후군에 대한 침치료입니다. Yao 등이 2020년에 발표한 메타분석에서 12개 RCT, 총 622명을 분석한 결과, 침치료는 위약 대비 VAS 통증 점수를 유의하게 개선했습니다. 평균 차이가 -1.36점이고, 신뢰구간이 영점을 포함하지 않습니다. 전기침을 병합하면 효과가 더 좋았습니다. 근거 수준으로 보면 부목이나 스테로이드 주사와 비슷한 I~II 등급입니다.\n\n【전환 멘트】\n침치료가 왜 효과가 있는지, 신경과학적 기전도 밝혀져 있습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 13 — 침치료 기전 (TYPE-F, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide13() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "MECHANISM", false);
+  addSectionTitle(s, "침치료 기전 — 중추 가소성과 혈위 근거", false);
+
+  vline(s, 0.6, 1.58, 0.85, C.accentBrand);
+  s.addText("Napadow et al. (2007, Pain) — 하버드 의대 fMRI\n침치료 후 체성감각피질(Somatosensory Cortex) 재조직화 확인 → 중추 가소성(Central Plasticity)", {
+    x: 0.85, y: 1.58, w: 8.55, h: 0.85,
+    fontSize: 14, color: C.textPrimary, fontFace: F, italic: true, wrap: true, valign: "middle",
+  });
+
+  var acupoints = [
+    { name: "大陵 (PC7)", anatomy: "수근관 직상부 정중신경 경로", effect: "국소 자극·염증 억제" },
+    { name: "內關 (PC6)", anatomy: "전완 굴근 사이 정중신경", effect: "통증 조절·Gate Control" },
+    { name: "合谷 (LI4)", anatomy: "대측 감각 피질 활성화", effect: "Gate Control 기반 진통" },
+    { name: "八邪 (EX-UE9)", anatomy: "손가락 사이 말초신경", effect: "혈류 개선·저림 완화" },
+  ];
+  acupoints.forEach(function(ap, i) {
+    var x = 0.6 + i * 2.4;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 2.65, w: 2.2, h: 2.5,
+      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
+    });
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 2.65, w: 2.2, h: 0.55,
+      fill: { color: C.accentBrand }, line: { color: C.accentBrand }, rectRadius: 0.22,
+    });
+    s.addText(ap.name, {
+      x: x + 0.1, y: 2.7, w: 2.0, h: 0.44,
+      fontSize: 15, bold: true, color: C.textInverse, fontFace: F, align: "center", valign: "middle",
+    });
+    s.addText(ap.anatomy, {
+      x: x + 0.1, y: 3.28, w: 2.0, h: 0.65,
+      fontSize: 12, color: C.textPrimary, fontFace: F, wrap: true,
+    });
+    s.addText(ap.effect, {
+      x: x + 0.1, y: 3.98, w: 2.0, h: 0.55,
+      fontSize: 12, color: C.textMuted, fontFace: F, wrap: true,
+    });
+  });
+
+  s.addText("Herman et al. (2018, Brain): 로컬 침 + 원위 침 모두 피질 재지도화 유도 확인", {
+    x: 0.6, y: 5.32, w: 8.8, h: 0.25,
+    fontSize: 11, color: C.textMuted, fontFace: F, italic: true,
+  });
+
+  s.addNotes("【발표 멘트】\n침치료의 기전에 대해 가장 흥미로운 연구는 하버드 의대 Napadow 팀의 fMRI 연구입니다. CTS 환자에게 침치료 후 체성감각피질의 재조직화, 즉 중추 가소성이 확인되었습니다. 침이 단순히 말초에서만 작용하는 게 아니라 뇌의 감각 지도를 바꾼다는 뜻입니다. 혈위별로 보면, 大陵(PC7)은 수근관 직상부에서 정중신경을 직접 자극하고, 合谷(LI4)은 대측 감각 피질을 활성화합니다.\n\n【전환 멘트】\n경추 신경근병증에 대한 침치료 근거도 살펴보겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 14 — 경추 침치료 + 추나 (TYPE-E, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide14() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "EVIDENCE", true);
+  addSectionTitle(s, "경추 신경근병증 — 침치료 + 추나 근거", true);
+
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 0.6, y: 1.6, w: 4.5, h: 3.3,
+    fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.22,
+  });
+  s.addText("침치료 근거", {
+    x: 0.8, y: 1.72, w: 4.1, h: 0.42,
+    fontSize: 20, bold: true, color: C.accentSuccess, fontFace: F,
+  });
+  s.addText("Liu et al. (2019, Spine)\n14개 RCT 분석\n\n• 침치료 + 추나/물리치료 병합 시 VAS 유의 개선\n• 단독 침치료도 4~8주 통증·저림 개선에 유효\n• 주요 혈위: 頸夾脊(Ex-B2), 風池(GB20),\n  後溪(SI3), 懸鍾(GB39)", {
+    x: 0.8, y: 2.2, w: 4.1, h: 2.55,
+    fontSize: 14, color: C.textInverse, fontFace: F, wrap: true,
+  });
+
+  s.addText("+", {
+    x: 5.15, y: 2.85, w: 0.5, h: 0.55,
+    fontSize: 36, bold: true, color: C.accentSuccess, fontFace: F,
+    align: "center", valign: "middle",
+  });
+
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 5.75, y: 1.6, w: 3.85, h: 3.3,
+    fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.22,
+  });
+  s.addText("추나(Chuna) 근거", {
+    x: 5.95, y: 1.72, w: 3.45, h: 0.42,
+    fontSize: 20, bold: true, color: C.accentSuccess, fontFace: F,
+  });
+  s.addText("Gross et al. (2015, Cochrane)\n도수치료 > 단독 운동요법\n(단기 통증 개선)\n\n대한추나의학회 임상진료지침\n(2021): 급성기 이후 B등급 권고", {
+    x: 5.95, y: 2.2, w: 3.45, h: 2.55,
+    fontSize: 14, color: C.textInverse, fontFace: F, wrap: true,
+  });
+
+  s.addNotes("【발표 멘트】\n경추 신경근병증에 대해서는 Liu 등의 Spine 논문에서 14개 RCT를 분석했는데, 침치료와 추나 또는 물리치료를 병합하면 VAS 점수가 유의하게 개선되었습니다. 단독 침치료도 4~8주의 단기간 치료에서 효과가 확인되었습니다. 주요 혈위는 頸夾脊, 風池, 後溪, 懸鍾입니다. 추나의 경우, Cochrane Review에서 경추 도수치료가 단독 운동요법보다 우수한 것으로 나왔고, 대한추나의학회 진료지침에서도 급성기 이후 B등급으로 권고하고 있습니다.\n\n【전환 멘트】\n다음으로, 한약 치료의 근거를 살펴보겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 15 — 한약 치료 근거 (TYPE-F, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide15() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "HERBAL MEDICINE", false);
+
+  vline(s, 0.6, 0.72, 0.7, C.accentBrand);
+  s.addText("한약 치료 근거 — 당귀사역탕 · 황기계지오물탕 · 우차신기환", {
+    x: 0.85, y: 0.72, w: 8.55, h: 0.7,
+    fontSize: 26, bold: true, color: C.textPrimary, fontFace: F, valign: "middle",
+  });
+
+  var herbCards = [
+    {
+      name: "당귀사역탕\n(當歸四逆湯)",
+      composition: "당귀·계지·작약·세신·통초·대조·감초",
+      indication: "氣虛血滯, 사지 냉증·저림",
+      evidence: "Kim et al. (2018, J Ethnopharmacol)\n말초 혈류 개선·혈관 수축 억제",
+      apply: "레이노 현상, 한증 손저림",
+      color: C.accentBrand,
+    },
+    {
+      name: "황기계지오물탕\n(黃芪桂枝五物湯)",
+      composition: "황기·계지·작약·생강·대조",
+      indication: "血痹(혈비) — 혈허·영위불화",
+      evidence: "Liu et al. (2020, Front Pharmacol)\nNGF 상향 조절 → 말초신경 재생",
+      apply: "기허혈체 상지 저림",
+      color: C.accentSuccess,
+    },
+    {
+      name: "우차신기환\n(牛車腎氣丸)",
+      composition: "육미지황 + 우슬·차전자·부자·육계",
+      indication: "신양허 → 당뇨병성 신경병증",
+      evidence: "Watanabe et al. (2014)\nNGF 증가, 산화 스트레스 경감",
+      apply: "일본 가이드라인 1차 선택",
+      color: C.accentDanger,
+    },
+  ];
+
+  herbCards.forEach(function(hc, i) {
+    var x = 0.6 + i * 3.15;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 1.6, w: 2.95, h: 3.5,
+      fill: { color: C.cardLight }, line: { color: hc.color, pt: 1.5 }, rectRadius: 0.22,
+    });
+    s.addText(hc.name, {
+      x: x + 0.15, y: 1.72, w: 2.65, h: 0.65,
+      fontSize: 16, bold: true, color: hc.color, fontFace: F,
+    });
+    s.addText("구성: " + hc.composition, {
+      x: x + 0.15, y: 2.42, w: 2.65, h: 0.5,
+      fontSize: 11, color: C.textMuted, fontFace: F, wrap: true,
+    });
+    s.addText("적응: " + hc.indication, {
+      x: x + 0.15, y: 2.96, w: 2.65, h: 0.42,
+      fontSize: 12, color: C.textPrimary, fontFace: F, wrap: true,
+    });
+    s.addText(hc.evidence, {
+      x: x + 0.15, y: 3.42, w: 2.65, h: 0.75,
+      fontSize: 11, color: C.textMuted, fontFace: F, wrap: true, italic: true,
+    });
+    s.addText("→ " + hc.apply, {
+      x: x + 0.15, y: 4.22, w: 2.65, h: 0.3,
+      fontSize: 12, bold: true, color: hc.color, fontFace: F,
+    });
+  });
+
+  s.addNotes("【발표 멘트】\n한약 치료는 병태에 따라 세 가지 처방을 기억하시면 됩니다. 첫째, 당귀사역탕. 傷寒論 351조에 근거한 처방으로, Kim 등의 J Ethnopharmacol 논문에서 말초 혈류 개선과 혈관 수축 억제 효과가 확인되었습니다. 레이노 현상이나 한증 손저림에 적합합니다. 둘째, 황기계지오물탕. 금궤요략 혈비편의 처방인데, NGF를 상향 조절하여 말초신경 재생을 촉진합니다. 셋째, 우차신기환. 일본 임상 가이드라인에서 당뇨병성 말초신경병증의 1차 선택 한약으로 수록되어 있습니다.\n\n【전환 멘트】\n이제 이러한 치료 근거들을 실제 외래 진료에 어떻게 적용할 것인지, 변증 체계를 정리해 보겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 16 — 변증별 치료 가이드 (TYPE-B, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide16() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "CLINICAL GUIDE", true);
+  addSectionTitle(s, "변증별(辨證別) 치료 가이드", true);
+
+  var syndromes = [
+    { code: "01", name: "氣虛血滯", feature: "무기력·창백·둔한 저림", method: "益氣活血", herb: "황기계지오물탕" },
+    { code: "02", name: "寒凝血脈", feature: "냉각 시 악화·색 변화", method: "溫陽散寒", herb: "당귀사역탕·부자탕" },
+    { code: "03", name: "瘀血阻絡", feature: "고정 통증·야간 악화·자반", method: "活血化瘀", herb: "혈부축어탕" },
+    { code: "04", name: "痰濕阻絡", feature: "무겁고 부은 저림", method: "化痰除濕", herb: "이진탕 합 도담탕" },
+    { code: "05", name: "肝腎虧虛", feature: "고령·근위축·반복 재발", method: "補益肝腎", herb: "독활기생탕·우차신기환" },
+  ];
+
+  syndromes.forEach(function(syn, i) {
+    var y = 1.6 + i * 0.78;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: 0.6, y: y, w: 9.0, h: 0.68,
+      fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.18,
+    });
+    s.addText(syn.code, {
+      x: 0.75, y: y + 0.1, w: 0.4, h: 0.45,
+      fontSize: 18, bold: true, color: C.accentSuccess, fontFace: F, align: "center",
+    });
+    s.addText(syn.name, {
+      x: 1.25, y: y + 0.1, w: 2.0, h: 0.45,
+      fontSize: 16, bold: true, color: C.textInverse, fontFace: F,
+    });
+    s.addText(syn.feature, {
+      x: 3.35, y: y + 0.12, w: 2.5, h: 0.42,
+      fontSize: 13, color: C.textMuted, fontFace: F,
+    });
+    s.addText(syn.method, {
+      x: 5.95, y: y + 0.12, w: 1.6, h: 0.42,
+      fontSize: 13, color: C.accentSuccess, fontFace: F, bold: true,
+    });
+    s.addText(syn.herb, {
+      x: 7.65, y: y + 0.12, w: 1.85, h: 0.42,
+      fontSize: 12, color: C.textInverse, fontFace: F,
+    });
+  });
+
+  s.addNotes("【발표 멘트】\n실제 외래에서 손저림 환자를 변증할 때, 이 다섯 가지 패턴으로 분류하시면 치료 방향이 명확해집니다. 기허혈체는 무기력하고 안색이 창백한 환자에서 둔한 저림이 특징이고, 황기계지오물탕으로 익기활혈합니다. 한응혈맥은 추울 때 악화되고 색 변화가 동반되면 당귀사역탕으로 온양산한합니다. 어혈조락은 고정 통증에 야간 악화가 있을 때, 혈부축어탕으로 활혈화어합니다. 담습조락은 부은 느낌과 저림이 함께 오면 이진탕 합 도담탕을 고려하고, 간신휴허는 고령에서 반복 재발하는 패턴이면 독활기생탕이나 우차신기환을 씁니다.\n\n【전환 멘트】\n변증을 정했으면, 이제 구체적인 치료 알고리즘을 따라가 보겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 17 — 치료 알고리즘 + Red Flags (TYPE-H, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide17() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "ALGORITHM", false);
+  addSectionTitle(s, "치료 알고리즘 + Red Flags", false);
+
+  var steps = [
+    { num: "1", text: "문진·이학적 검사 — Phalen·Tinel·Spurling" },
+    { num: "2", text: "변증 결정 + 영상 판독 (필요 시 X-ray, MRI 의뢰)" },
+    { num: "3", text: "경증 CTS: PC7·PC6·LI4·八邪 침 + 황기계지오물탕 4~6주" },
+    { num: "4", text: "경추 유래: 頸夾脊·風池·後溪 + 추나 병합 6~8주" },
+    { num: "5", text: "4~6주 재평가 → 미흡 시 양방 협진" },
+  ];
+
+  steps.forEach(function(step, i) {
+    var y = 1.55 + i * 0.72;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: 0.6, y: y, w: 5.4, h: 0.62,
+      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.18,
+    });
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: 0.6, y: y, w: 0.42, h: 0.62,
+      fill: { color: C.accentBrand }, line: { color: C.accentBrand }, rectRadius: 0.18,
+    });
+    s.addText(step.num, {
+      x: 0.6, y: y, w: 0.42, h: 0.62,
+      fontSize: 14, bold: true, color: C.textInverse, fontFace: F,
+      align: "center", valign: "middle",
+    });
+    s.addText(step.text, {
+      x: 1.1, y: y + 0.05, w: 4.8, h: 0.52,
+      fontSize: 12, color: C.textPrimary, fontFace: F, wrap: true,
+    });
+    if (i < steps.length - 1) {
+      s.addText("v", {
+        x: 1.2, y: y + 0.62, w: 0.3, h: 0.1,
+        fontSize: 10, color: C.textMuted, fontFace: F, align: "center",
+      });
+    }
+  });
+
+  // Red Flags 박스
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 6.2, y: 1.55, w: 3.4, h: 3.5,
+    fill: { color: "FFF0F0" }, line: { color: C.accentDanger, pt: 2 }, rectRadius: 0.22,
+  });
+  s.addText("Red Flags — 즉시 의뢰", {
+    x: 6.35, y: 1.68, w: 3.1, h: 0.38,
+    fontSize: 14, bold: true, color: C.accentDanger, fontFace: F,
+  });
+  var redFlags = [
+    "편측 상하지 동시 저림\n→ 뇌졸중",
+    "양측 저림 + 보행 장애\n→ 척수병증",
+    "진행성 근위축·근력 저하\n→ ALS 의심",
+    "발열 + 경부 강직\n→ 감염성 병변",
+  ];
+  redFlags.forEach(function(rf, i) {
+    s.addText("• " + rf, {
+      x: 6.35, y: 2.15 + i * 0.72, w: 3.1, h: 0.62,
+      fontSize: 12, color: C.accentDanger, fontFace: F, wrap: true,
+    });
+  });
+
+  s.addNotes("【발표 멘트】\n실제 외래 알고리즘입니다. 첫 단계는 문진과 이학적 검사로 원인을 감별하고, 필요하면 영상 의뢰를 합니다. 변증을 결정한 뒤 경증 CTS면 침치료에 황기계지오물탕을 4~6주 처방합니다. 경추 유래면 頸夾脊 침에 추나를 병합해서 6~8주 치료합니다. 4~6주 후 반드시 재평가하고, 개선이 미흡하면 양방 협진을 고려합니다. Red Flags: 갑작스러운 편측 상하지 동시 저림은 뇌졸중, 양측 저림에 보행 장애가 동반되면 척수병증, 진행성 근위축은 ALS를 의심해야 합니다.\n\n【전환 멘트】\n마지막으로 환자 교육과 예방 지도도 빠뜨릴 수 없습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 18 — 예방 및 생활 지도 (TYPE-D, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide18() {
+  const s = pptx.addSlide();
+  bg(s, false);
+  addBadge(s, "PREVENTION", false);
+  addSectionTitle(s, "예방 및 생활 지도 — 원인별 맞춤 가이드", false);
+
+  var guides = [
+    {
+      disease: "CTS 예방",
+      items: ["손목 중립 자세 유지\n(컴퓨터 사용 시 손목 받침대)", "야간 손목 부목 착용"],
+      color: C.accentBrand,
+    },
+    {
+      disease: "경추 신경근병증",
+      items: ["경부 스트레칭·강화 운동", "자세 교정\n(스마트폰·모니터 높이)"],
+      color: C.accentSuccess,
+    },
+    {
+      disease: "레이노 현상",
+      items: ["한랭 회피", "방한 장갑 착용"],
+      color: C.accentBrand,
+    },
+    {
+      disease: "당뇨병성 신경병증",
+      items: ["혈당 조절\n(HbA1c 목표치 관리)", "정기적 신경전도 검사"],
+      color: C.accentDanger,
+    },
+  ];
+
+  guides.forEach(function(g, i) {
+    var x = 0.6 + i * 2.4;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 1.58, w: 2.2, h: 3.3,
+      fill: { color: C.cardLight }, line: { color: C.cardLight }, rectRadius: 0.22,
+    });
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 1.58, w: 2.2, h: 0.5,
+      fill: { color: g.color }, line: { color: g.color }, rectRadius: 0.22,
+    });
+    s.addText(g.disease, {
+      x: x + 0.08, y: 1.62, w: 2.04, h: 0.42,
+      fontSize: 13, bold: true, color: C.textInverse, fontFace: F, align: "center", valign: "middle",
+    });
+    g.items.forEach(function(item, j) {
+      s.addText("• " + item, {
+        x: x + 0.12, y: 2.22 + j * 1.1, w: 1.96, h: 0.95,
+        fontSize: 13, color: C.textPrimary, fontFace: F, wrap: true, valign: "top",
+      });
+    });
+  });
+
+  s.addShape(pptx.ShapeType.roundRect, {
+    x: 0.6, y: 5.07, w: 8.8, h: 0.42,
+    fill: { color: C.cardLight },
+    line: { color: C.accentBrand, pt: 1.5 }, rectRadius: 0.18,
+  });
+  s.addText("치료와 함께 생활 지도 병행 — 재발 방지의 핵심", {
+    x: 0.8, y: 5.1, w: 8.4, h: 0.35,
+    fontSize: 14, bold: true, color: C.accentBrand, fontFace: F, align: "center", valign: "middle",
+  });
+
+  s.addNotes("【발표 멘트】\n치료만큼 중요한 것이 예방과 생활 지도입니다. CTS 환자에게는 컴퓨터 사용 시 손목 중립 자세를 유지하도록 교육하고, 야간 손목 부목 착용을 권합니다. 경추 문제가 있는 환자에게는 경부 스트레칭과 강화 운동을 알려드리고, 스마트폰이나 모니터 높이를 교정하도록 안내합니다. 레이노 현상 환자에게는 한랭 회피와 방한 장갑 착용이 필수입니다. 당뇨병성 신경병증 환자에게는 무엇보다 혈당 조절의 중요성을 강조해야 합니다.\n\n【전환 멘트】\n이제 오늘 강의의 핵심을 정리하겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 19 — 핵심 요약 (TYPE-B, Dark)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide19() {
+  const s = pptx.addSlide();
+  bg(s, true);
+  addBadge(s, "SUMMARY", true);
+  addSectionTitle(s, "손저림 진료 — 5단계 핵심 정리", true);
+
+  var summaryItems = [
+    { num: "01", title: "분류", body: "말초신경 포착 / 경추 신경근병증\n/ TOS / 혈관성 / 대사성 / 중추성" },
+    { num: "02", title: "감별", body: "병력 청취 6가지\n+ 이학적 검사 3가지\n(Phalen, Tinel, Spurling)" },
+    { num: "03", title: "치료 근거", body: "침: CTS 메타분석 Level I~II\n한약: 당귀사역탕·황기계지오물탕\n·우차신기환 / 추나: 경추 B등급" },
+    { num: "04", title: "변증 5가지", body: "기허혈체·한응혈맥·어혈조락\n담습조락·간신휴허" },
+    { num: "05", title: "Red Flags", body: "편측 동시 저림 → 뇌졸중\n보행 장애 → 척수병증\n근위축 → ALS" },
+  ];
+
+  // 상단 3개 + 하단 2개 배치
+  summaryItems.slice(0, 3).forEach(function(item, i) {
+    var x = 0.6 + i * 3.05;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 1.65, w: 2.85, h: 1.6,
+      fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.22,
+    });
+    s.addText(item.num, {
+      x: x + 0.15, y: 1.75, w: 0.55, h: 0.45,
+      fontSize: 22, bold: true, color: C.accentSuccess, fontFace: F,
+    });
+    s.addText(item.title, {
+      x: x + 0.75, y: 1.75, w: 1.95, h: 0.45,
+      fontSize: 18, bold: true, color: C.textInverse, fontFace: F,
+    });
+    s.addText(item.body, {
+      x: x + 0.15, y: 2.25, w: 2.55, h: 0.85,
+      fontSize: 12, color: C.textMuted, fontFace: F, wrap: true,
+    });
+  });
+
+  summaryItems.slice(3).forEach(function(item, i) {
+    var x = 0.6 + i * 4.6;
+    s.addShape(pptx.ShapeType.roundRect, {
+      x: x, y: 3.55, w: 4.35, h: 1.6,
+      fill: { color: C.cardDark }, line: { color: C.cardDark }, rectRadius: 0.22,
+    });
+    s.addText(item.num, {
+      x: x + 0.15, y: 3.65, w: 0.55, h: 0.45,
+      fontSize: 22, bold: true, color: C.accentSuccess, fontFace: F,
+    });
+    s.addText(item.title, {
+      x: x + 0.75, y: 3.65, w: 3.45, h: 0.45,
+      fontSize: 18, bold: true, color: C.textInverse, fontFace: F,
+    });
+    s.addText(item.body, {
+      x: x + 0.15, y: 4.15, w: 4.05, h: 0.85,
+      fontSize: 12, color: C.textMuted, fontFace: F, wrap: true,
+    });
+  });
+
+  s.addNotes("【발표 멘트】\n오늘 강의의 핵심을 다섯 가지로 정리합니다. 첫째, 손저림은 여섯 가지 카테고리로 분류합니다. 둘째, 병력 청취 여섯 가지 항목과 이학적 검사 세 가지로 감별합니다. 셋째, 침치료는 CTS에 메타분석 수준의 근거가 있고, 한약은 병태에 따라 당귀사역탕, 황기계지오물탕, 우차신기환을 선별 적용합니다. 넷째, 변증은 다섯 가지 패턴으로 나누어 접근합니다. 다섯째, 편측 동시 저림이나 보행 장애 같은 Red Flags는 절대 놓치지 마십시오.\n\n【전환 멘트】\n마지막으로 참고문헌을 안내드리고 마무리하겠습니다.");
+})();
+
+// ═══════════════════════════════════════════════════════════════════════════
+// 슬라이드 20 — Q&A / 참고문헌 (TYPE-A, Light)
+// ═══════════════════════════════════════════════════════════════════════════
+(function slide20() {
+  const s = pptx.addSlide();
+  bg(s, false);
+
+  s.addText("Q & A", {
+    x: 0.6, y: 0.35, w: 5.0, h: 1.0,
+    fontSize: 56, bold: true, color: C.accentBrand, fontFace: F,
+  });
+  s.addText("감사합니다", {
+    x: 0.6, y: 1.25, w: 5.0, h: 0.55,
+    fontSize: 24, color: C.textMuted, fontFace: F,
+  });
+
+  hline(s, 0.6, 1.9, 8.8, C.textMuted);
+
+  s.addText("참고문헌", {
+    x: 0.6, y: 2.05, w: 2.0, h: 0.3,
+    fontSize: 13, bold: true, color: C.textPrimary, fontFace: F,
+  });
+
+  var refs = [
+    "1. Atroshi et al. (1999) JAMA — CTS 유병률",
+    "2. Szabo & Chidgey (1989) J Hand Surg Am — 수근관 내압",
+    "3. Radhakrishnan et al. (1994) Brain — 경추 신경근병증 역학",
+    "4. Boulton et al. (2005) Lancet — DPN 역학",
+    "5. Yao et al. (2020) Evid Based Complement Alternat Med — 침치료 CTS 메타분석",
+    "6. Napadow et al. (2007) Pain — 침치료 fMRI 연구",
+    "7. Herman et al. (2018) Brain — 침치료 피질 재조직화",
+    "8. Liu et al. (2019) Spine — 경추 침치료 체계적 고찰",
+    "9. Kim et al. (2018) J Ethnopharmacol — 당귀사역탕",
+    "10. Liu et al. (2020) Front Pharmacol — 황기계지오물탕 NGF",
+    "11. Watanabe et al. (2014) J Diabetes Investig — 우차신기환 DPN",
+    "12. Gross et al. (2015) Cochrane Review — 경추 도수치료",
+    "13. 대한추나의학회 (2021) — 추나 임상진료지침",
+  ];
+
+  refs.slice(0, 7).forEach(function(ref, i) {
+    s.addText(ref, {
+      x: 0.6, y: 2.42 + i * 0.38, w: 4.6, h: 0.34,
+      fontSize: 10, color: C.textMuted, fontFace: F,
+    });
+  });
+  refs.slice(7).forEach(function(ref, i) {
+    s.addText(ref, {
+      x: 5.3, y: 2.42 + i * 0.38, w: 4.3, h: 0.34,
+      fontSize: 10, color: C.textMuted, fontFace: F,
+    });
+  });
+
+  s.addNotes("【발표 멘트】\n이상으로 손저림의 한의학적 이해와 치료에 대한 강의를 마칩니다. 오늘 다룬 내용 중 임상에서 궁금하신 점이나, 실제 환자 사례에 대해 논의하고 싶으신 부분이 있으시면 편하게 질문해 주십시오. 참고문헌은 슬라이드에 정리해 두었으니 추후 원문 확인 시 활용하시기 바랍니다. 경청해 주셔서 감사합니다.\n\n【전환 멘트】\n(강의 종료)");
+})();
+
+// ── 파일 저장 ────────────────────────────────────────────────────────────────
 pptx.writeFile({ fileName: "lecture-agent-team/output/lecture.pptx" })
   .then(function() { console.log("lecture.pptx 생성 완료"); })
-  .catch(function(err) { console.error("오류:", err); });
+  .catch(function(err) { console.error("오류:", err); process.exit(1); });

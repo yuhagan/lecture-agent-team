@@ -11,6 +11,12 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "pptxgenjs": "^4.0.1"
+    "body-parser": "^2.2.2",
+    "canvas": "^3.2.3",
+    "ds": "^2.0.2",
+    "express": "^5.2.1",
+    "pdfjs-dist": "^5.6.205",
+    "pptxgenjs": "^4.0.1",
+    "tesseract.js": "^7.0.0"
   }
 }

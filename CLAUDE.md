@@ -9,7 +9,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## 실행 명령어
 
 ```bash
-# 의존성 설치
+# ── Node.js PPTX 의존성 설치 ──────────────────────────────────────────
 npm install
 
 # PPTX 생성 스크립트 실행 (각 스크립트가 독립적으로 .pptx 파일을 출력)
@@ -21,9 +21,47 @@ node generate-silson-lecture.js     # 실손강의_메디.pptx
 # 멀티에이전트 강의 생성 파이프라인
 cd lecture-agent-team
 node output/build.js                # 빌더가 생성한 스크립트 직접 실행
+
+# ── Python doc2md 변환기 ──────────────────────────────────────────────
+pip install -r requirements.txt     # chardet, pyhwp
+# 외부 도구도 필요: pandoc (docx/doc), LibreOffice (doc/hwp 폴백)
+
+python main.py report.hwpx -o report.md
+python main.py ./docs_folder/ -o ./output/ --recursive
+python main.py table-heavy.hwpx --html-tables   # 표를 HTML <table>로 출력
+
+# ── info-video (Remotion 동영상 파이프라인) ───────────────────────────
+cd video
+npm install
+# video-config.json 직접 수정 후 (API 키 불필요):
+npm run pipeline    # 오디오 → duration 동기화 → 자막 → 렌더 일괄 실행
+npm start           # Remotion Studio 미리보기
+npm run render      # 렌더만 단독 실행
 ```
 
 ## 아키텍처
+
+### Python doc2md 변환기 (`main.py` + `converters/`)
+
+HWP/HWPX/DOC/DOCX 파일을 Markdown으로 변환하는 CLI 도구.
+
+- `main.py` — CLI 진입점 (단일 파일 및 배치 모드)
+- `converters/base.py` — `BaseConverter` 추상 클래스 (`convert(input, output, images_dir)`)
+- `converters/hwpx_converter.py` — 순수 Python (외부 도구 불필요)
+- `converters/hwp_converter.py` — pyhwp(우선) 또는 LibreOffice+pandoc(폴백)
+- `converters/docx_converter.py` — pandoc 사용
+- `converters/doc_converter.py` — LibreOffice → DOCX → pandoc
+- `cleanup.py` — 변환 후 Markdown 후처리 (불필요 줄바꿈 제거 등)
+- `utils.py` — 외부 도구 존재 여부 확인 및 설치 힌트 출력
+
+### info-video (`video/`)
+
+Remotion 기반 의학 인포그래픽 동영상 자동화 파이프라인.
+`video-config.json`을 수정하면 Claude Code가 오디오·자막·렌더를 일괄 처리한다.
+
+- `generate-config.js`(Claude API)는 기본 플로우에서 제외 — API 키 불필요
+- 브랜드 컬러: hero/stat 씬 `bgDark: #1B2A4A` / list 씬 `bgLight: #F0F4F8` / accent `#0A7E8C`
+- narration 총합 35초 초과 시 list.narration부터 줄인다
 
 ### 루트 레벨 — 독립 실행형 스크립트
 
@@ -153,6 +191,16 @@ notion-create-pages로 저장 시 아래 구조로 작성한다:
 
 ## 의존성
 
+### Node.js (루트)
 - `pptxgenjs ^4.0.1` — PPTX 생성 라이브러리 (CommonJS `require("pptxgenjs")`)
 - `@types/node` — Node.js 타입
 - `image-size` — 이미지 크기 감지 (pptxgenjs 내부 의존성)
+
+### Python (doc2md)
+- `chardet>=5.0` — 구형 HWP EUC-KR 인코딩 감지
+- `pyhwp>=0.1b12` — HWP 바이너리 변환 (`hwp5html` / `hwp5txt`)
+- 외부 도구: `pandoc` (docx/doc 변환), `LibreOffice` (doc/hwp 폴백)
+
+### Node.js (`video/`)
+- `remotion` — 동영상 렌더링 프레임워크
+- `@anthropic-ai/sdk` — generate-config.js에서만 사용 (선택적)

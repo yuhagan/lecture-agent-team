@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PDF to Images</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+</head>
+<body>
+    <h1 id="status">Converting PDF to Images...</h1>
+    <script>
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        async function process() {
+            try {
+                const pdf = await pdfjsLib.getDocument('/pdf').promise;
+                const numPages = pdf.numPages;
+                
+                for (let i = 1; i <= numPages; i++) {
+                    const page = await pdf.getPage(i);
+                    // Higher scale for clear text/image bounding box detection
+                    const viewport = page.getViewport({ scale: 2.5 });
+                    
+                    const canvas = document.createElement('canvas');
+                    const context = canvas.getContext('2d');
+                    canvas.height = viewport.height;
+                    canvas.width = viewport.width;
+                    
+                    await page.render({ canvasContext: context, viewport: viewport }).promise;
+                    const dataUrl = canvas.toDataURL('image/png');
+                    
+                    await fetch('/save-image', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ pageNum: i, imageBase64: dataUrl })
+                    });
+                }
+                
+                await fetch('/done', { method: 'POST' });
+                document.getElementById('status').textContent = 'DONE!';
+            } catch (err) {
+                document.getElementById('status').textContent = 'Error: ' + err.message;
+            }
+        }
+        process();
+    </script>
+</body>
+</html>

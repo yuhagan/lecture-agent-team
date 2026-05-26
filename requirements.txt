@@ -1,0 +1,15 @@
+# doc2md Python dependencies
+chardet>=5.0          # encoding detection for old HWP (EUC-KR)
+pyhwp>=0.1b12         # optional: HWP binary converter (hwp5html / hwp5txt)
+
+# External tools required (not pip-installable):
+#
+#   pandoc        https://pandoc.org/installing.html
+#     macOS:   brew install pandoc
+#     Ubuntu:  apt install pandoc
+#     Windows: winget install pandoc
+#
+#   LibreOffice   https://www.libreoffice.org/  (for .doc and .hwp fallback)
+#     macOS:   brew install --cask libreoffice
+#     Ubuntu:  apt install libreoffice
+#     Windows: winget install TheDocumentFoundation.LibreOffice
